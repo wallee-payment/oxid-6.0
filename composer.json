@@ -1,0 +1,32 @@
+{
+	"name" : "wallee/oxid/oxid-6.0",
+	"description" : "WLE Wallee Module",
+	"type" : "oxideshop-module",
+	"keywords" : [
+		"oxid",
+		"modules",
+		"eShop"
+	],
+	"homepage" : "https://www.customeb.com/",
+	"license" : [
+		"Apache-2.0"
+	],
+	"extra" : {
+		"oxideshop" : {
+			"target-directory" : "wle/Wallee"
+		}
+	},
+	"autoload" : {
+		"psr-4" : {
+			"Wle\\Wallee\\" : "../../../source/modules/wle/Wallee"
+		}
+	},
+	"require" : {
+		"wallee/sdk" : "1.1.7",
+		"monolog/monolog" : "^1.0"
+	},
+	"require-dev" : {
+		"oxid-esales/oxideshop-ce": "^6.0",
+		"oxid-esales/testing-library": "^3.2"
+	}
+}
