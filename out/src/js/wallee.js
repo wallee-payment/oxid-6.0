@@ -5,8 +5,9 @@
         running: false,
 
         initialized: function () {
-            $('#button-confirm').removeAttr('disabled');
             $('#Wallee-iframe-spinner').hide();
+            $('#Wallee-iframe-container').show();
+            $('#button-confirm').removeAttr('disabled');
             $('#button-confirm').click(function (event) {
                 Wallee.handler.validate();
                 $('#button-confirm').attr('disabled', 'disabled');
