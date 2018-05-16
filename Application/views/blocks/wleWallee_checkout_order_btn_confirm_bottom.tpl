@@ -21,7 +21,7 @@
     [{/capture}]
 [{oxscript add=$WalleeInitScript}]
 [{oxscript include=$oView->getWalleeJavascriptUrl()}]
-[{oxscript include=$oViewConf->getModuleUrl("wleWallee", "out/src/js/wallee.js")}]
+[{oxscript include=$oViewConf->getModuleUrl("wleWallee", "out/src/js/wallee.js") priority=10}]
 [{oxstyle include=$oViewConf->getModuleUrl("wleWallee", "out/src/css/spinner.css")}]
 [{/if}]
 [{$smarty.block.parent}]
