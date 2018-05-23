@@ -1,85 +1,85 @@
 CREATE TABLE IF NOT EXISTS `wleWallee_transaction` (
-  `OXID` char(32) NOT NULL,
-  `OXORDERID` char(32) NOT NULL,
+  `OXID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
+  `OXORDERID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
   `WLETRANSACTIONID` bigint(20) unsigned NOT NULL,
   `WLESTATE` varchar(255) NOT NULL,
   `WLESPACEID` bigint(20) unsigned NOT NULL,
   `WLESPACEVIEWID` bigint(20) unsigned DEFAULT NULL,
   `WLEFAILUREREASON` longtext,
   `WLETEMPBASKET` longtext,
-  `WLEVERSION` int(11) NOT NULL DEFAULT 0,
-  `WLEUPDATED` TIMESTAMP NOT NULL DEFAULT now() ON UPDATE now(),
+  `WLEVERSION` int(11) NOT NULL DEFAULT '0',
+  `WLEUPDATED` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`OXID`),
   UNIQUE KEY `unq_transaction_id_space_id` (`WLETRANSACTIONID`,`WLESPACEID`),
   UNIQUE KEY `unq_order_id` (`OXORDERID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `wleWallee_completionjob` (
-  `OXID` char(32) NOT NULL,
-  `OXORDERID` char(32) NOT NULL,
+  `OXID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
+  `OXORDERID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
   `WLETRANSACTIONID` bigint(20) unsigned NOT NULL,
-  `WLEJOBID` bigint(20) unsigned,
+  `WLEJOBID` bigint(20) unsigned DEFAULT NULL,
   `WLESTATE` varchar(255) NOT NULL,
   `WLESPACEID` bigint(20) unsigned NOT NULL,
   `WLEFAILUREREASON` longtext,
-  `WLEUPDATED` TIMESTAMP NOT NULL DEFAULT now() ON UPDATE now(),
+  `WLEUPDATED` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`OXID`),
-  INDEX `unq_job_id_space_id` (`WLEJOBID`,`WLESPACEID`),
-  INDEX `idx_order_id` (`OXORDERID`),
-  INDEX `idx_state` (`WLESTATE`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+  KEY `unq_job_id_space_id` (`WLEJOBID`,`WLESPACEID`),
+  KEY `idx_order_id` (`OXORDERID`),
+  KEY `idx_state` (`WLESTATE`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `wleWallee_voidjob` (
-  `OXID` char(32) NOT NULL,
-  `OXORDERID` char(32) NOT NULL,
+  `OXID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
+  `OXORDERID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
   `WLETRANSACTIONID` bigint(20) unsigned NOT NULL,
-  `WLEJOBID` bigint(20) unsigned,
+  `WLEJOBID` bigint(20) unsigned DEFAULT NULL,
   `WLESTATE` varchar(255) NOT NULL,
   `WLESPACEID` bigint(20) unsigned NOT NULL,
   `WLEFAILUREREASON` longtext,
-  `WLEUPDATED` TIMESTAMP NOT NULL DEFAULT now() ON UPDATE now(),
+  `WLEUPDATED` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`OXID`),
-  INDEX `unq_job_id_space_id` (`WLEJOBID`,`WLESPACEID`),
-  INDEX `idx_order_id` (`OXORDERID`),
-  INDEX `idx_state` (`WLESTATE`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+  KEY `unq_job_id_space_id` (`WLEJOBID`,`WLESPACEID`),
+  KEY `idx_order_id` (`OXORDERID`),
+  KEY `idx_state` (`WLESTATE`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `wleWallee_refundjob` (
-  `OXID` char(32) NOT NULL,
-  `OXORDERID` char(32) NOT NULL,
+  `OXID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
+  `OXORDERID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
   `WLETRANSACTIONID` bigint(20) unsigned NOT NULL,
-  `WLEJOBID` bigint(20) unsigned,
+  `WLEJOBID` bigint(20) unsigned DEFAULT NULL,
   `WLESTATE` varchar(255) NOT NULL,
   `WLESPACEID` bigint(20) unsigned NOT NULL,
   `FORMREDUCTIONS` longtext,
-  `WLERESTOCK` bool NOT NULL,
+  `WLERESTOCK` tinyint(1) NOT NULL,
   `WLEFAILUREREASON` longtext,
-  `WLEUPDATED` TIMESTAMP NOT NULL DEFAULT now() ON UPDATE now(),
+  `WLEUPDATED` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`OXID`),
-  INDEX `unq_job_id_space_id` (`WLEJOBID`,`WLESPACEID`),
-  INDEX `idx_order_id` (`OXORDERID`),
-  INDEX `idx_state` (`WLESTATE`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+  KEY `unq_job_id_space_id` (`WLEJOBID`,`WLESPACEID`),
+  KEY `idx_order_id` (`OXORDERID`),
+  KEY `idx_state` (`WLESTATE`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `wleWallee_cron` (
-  `OXID` char(32) NOT NULL,
+  `OXID` char(32) CHARACTER SET latin1 COLLATE latin1_general_ci NOT NULL DEFAULT '',
   `WLEFAILUREREASON` longtext,
-  `WLESTATE` char(7),
-  `WLESCHEDULED` DATETIME NOT NULL,
-  `WLESTARTED` DATETIME,
-  `WLECOMPLETED` DATETIME,
-  `WLECONSTRAINT` SMALLINT,
+  `WLESTATE` char(7) DEFAULT NULL,
+  `WLESCHEDULED` datetime NOT NULL,
+  `WLESTARTED` datetime DEFAULT NULL,
+  `WLECOMPLETED` datetime DEFAULT NULL,
+  `WLECONSTRAINT` smallint(6) DEFAULT NULL,
   PRIMARY KEY (`OXID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `wleWallee_alert` (
   `WLEKEY` varchar(11) NOT NULL,
   `WLEFUNC` varchar(20) NOT NULL,
   `WLETARGET` varchar(20) NOT NULL,
-  `WLECOUNT` int unsigned DEFAULT NULL,
-  `WLEUPDATED` TIMESTAMP NOT NULL DEFAULT now() ON UPDATE now(),
+  `WLECOUNT` int(10) unsigned DEFAULT NULL,
+  `WLEUPDATED` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`WLEKEY`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `wleWallee_alert` (`WLEKEY`, `WLEFUNC`, `WLETARGET`, `WLECOUNT`) VALUES ('manual_task', 'manualtask', '_parent', 0);
 
