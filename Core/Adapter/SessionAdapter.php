@@ -45,13 +45,7 @@ class SessionAdapter implements ITransactionServiceAdapter
         }
         $this->session = $session;
         $this->basketAdapter = new BasketAdapter($session->getBasket());
-
-        $useShipping = false;
-        $shipping = oxNew(\OxidEsales\Eshop\Application\Model\Address::class);
-        if ($shipping->load($session->getVariable('deladrid'))) {
-            $useShipping = true;
-        }
-        $this->addressAdapter = new AddressAdapter($useShipping ? $shipping : null, $session->getUser()->getSelectedAddress());
+        $this->addressAdapter = new AddressAdapter($session->getUser()->getSelectedAddress(), $session->getUser());
     }
 
     public function getCreateData()

@@ -26,8 +26,13 @@ class AddressAdapter implements IAddressAdapter
 {
     private $shipping = null;
     private $billing = null;
-
-    public function __construct(\OxidEsales\Eshop\Application\Model\Address $shipping = null, \OxidEsales\Eshop\Application\Model\Address $billing = null)
+    
+    /**
+     * 
+     * @param \OxidEsales\Eshop\Application\Model\Address $shipping
+     * @param \OxidEsales\Eshop\Application\Model\User $billing
+     */
+    public function __construct(\OxidEsales\Eshop\Core\Base $shipping = null, \OxidEsales\Eshop\Application\Model\User $billing = null)
     {
         $this->shipping = $shipping;
         $this->billing = $billing;
@@ -48,10 +53,15 @@ class AddressAdapter implements IAddressAdapter
         }
         return null;
     }
-
-    private function convertAddress(\OxidEsales\Eshop\Application\Model\Address $address)
+    
+    /**
+     * 
+     * @param \OxidEsales\Eshop\Application\Model\Address|\OxidEsales\Eshop\Application\Model\User $address
+     * @return \Wallee\Sdk\Model\AddressCreate
+     */
+    private function convertAddress(\OxidEsales\Eshop\Core\Base $address)
     {
-        $addressCreate = new AddressCreate();
+    	$addressCreate = new AddressCreate();
         $addressCreate->setGivenName($address->getFieldData('oxfname'));
         $addressCreate->setFamilyName($address->getFieldData('oxlname'));
         $addressCreate->setCity($address->getFieldData('oxcity'));
@@ -60,11 +70,13 @@ class AddressAdapter implements IAddressAdapter
         if ($country->load($address->getFieldData('oxcountryid'))) {
             $addressCreate->setCountry($country->getFieldData('oxisoalpha2'));
         }
-        $addressCreate->setStreet(trim($address->getFieldData('oxstreet') . ' ' . $address->getFieldData('oxoxstreetnr')));
+        $addressCreate->setStreet(trim($address->getFieldData('oxstreet') . ' ' . $address->getFieldData('oxstreetnr')));
         $addressCreate->setPhoneNumber($address->getFieldData('oxfon'));
         $addressCreate->setPostalState($address->getFieldData('oxstate'));
         $addressCreate->setPostCode($address->getFieldData('oxzip'));
         $addressCreate->setOrganizationName($address->getFieldData('oxcompany'));
+        $addressCreate->setMobilePhoneNumber($address->getFieldData('oxmobfon'));
+        $addressCreate->setDateOfBirth(new \DateTime($address->getFieldData('oxbirthdate')));
 
         $salutation = $address->getFieldData('oxsal');
         if (strtolower($salutation) === 'mr') {
