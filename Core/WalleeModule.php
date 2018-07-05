@@ -448,6 +448,7 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
         } catch (\Exception $ex) {
             self::log(Logger::ERROR, $ex->getMessage());
             error_log($sFailureError . $ex->getMessage());
+            return false;
         }
 
         self::clearTmp();

@@ -46,6 +46,8 @@ class OrderController extends OrderController_parent
 
     public function wleConfirm()
     {
+    	// TODO stuff here
+    	\OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
     	$order = oxNew(\OxidEsales\Eshop\Application\Model\Order::class);
         $response = array(
             'status' => false,
@@ -61,7 +63,11 @@ class OrderController extends OrderController_parent
                 if ($state === 'WALLEE_' . TransactionState::PENDING) {
                     $transaction->setTempBasket($this->getBasket());
                     $transaction->setOrderId($order->getId());
+                    // TODO stuff here
+                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
+                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
                     $transaction->updateFromSession(true);
+                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
                     $response['status'] = true;
                 } else if ($state == \OxidEsales\Eshop\Application\Model\Order::ORDER_STATE_ORDEREXISTS) {
                     // ensure new order can be created
