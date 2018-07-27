@@ -22,7 +22,7 @@
 		}
 	},
 	"require" : {
-		"wallee/sdk" : "1.1.7",
+		"wallee/sdk" : "1.1.9",
 		"monolog/monolog" : "^1.0"
 	},
 	"require-dev" : {
