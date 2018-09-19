@@ -81,16 +81,15 @@ class Settings {
 	}
 
 	public function getMigration() {
-        $level = $this->getSetting('Migration');
-        if(!$level) {
+		$level = \OxidEsales\Eshop\Core\Registry::getConfig()->getShopConfVar('wleWalleeMigration', \OxidEsales\Eshop\Core\Registry::getConfig()->getBaseShopId(),\OxidEsales\Eshop\Core\Config::OXMODULE_MODULE_PREFIX . WalleeModule::instance()->getId());
+		if(!$level) {
             $level = 0;
         }
         return $level;
     }
 
     public function setMigration($level) {
-        // save config directly
-    	\OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar('int', 'wleWalleeMigration', $level);
+    	\OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar('num', 'wleWalleeMigration', $level, \OxidEsales\Eshop\Core\Registry::getConfig()->getBaseShopId(), \OxidEsales\Eshop\Core\Config::OXMODULE_MODULE_PREFIX . WalleeModule::instance()->getId());
     }
 
 	protected function getLogLevel(){
@@ -120,19 +119,19 @@ class Settings {
     }
 
 	public function getWebhookUrl() {
-	    return $this->getSetting('WebhookUrl');
+		return \OxidEsales\Eshop\Core\Registry::getConfig()->getShopConfVar('wleWalleeWebhook', \OxidEsales\Eshop\Core\Registry::getConfig()->getBaseShopId(),\OxidEsales\Eshop\Core\Config::OXMODULE_MODULE_PREFIX . WalleeModule::instance()->getId());
     }
 
     public function setWebhookUrl($value) {
-    	\OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar('string', 'wleWalleeWebhook', $value);
+    	\OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar('string', 'wleWalleeWebhook', $value, \OxidEsales\Eshop\Core\Registry::getConfig()->getBaseShopId(), \OxidEsales\Eshop\Core\Config::OXMODULE_MODULE_PREFIX . WalleeModule::instance()->getId());
     }
 
     public function setGlobalParameters($shopId = null) {
     	$appKey = \OxidEsales\Eshop\Core\Registry::getConfig()->getShopConfVar('wleWalleeAppKey', $shopId, \OxidEsales\Eshop\Core\Config::OXMODULE_MODULE_PREFIX . WalleeModule::instance()->getId());
     	$userId = \OxidEsales\Eshop\Core\Registry::getConfig()->getShopConfVar('wleWalleeUserId', $shopId, \OxidEsales\Eshop\Core\Config::OXMODULE_MODULE_PREFIX . WalleeModule::instance()->getId());
-	    foreach(\OxidEsales\Eshop\Core\Registry::getConfig()->getShopIds() as $shop) {
+    	foreach(\OxidEsales\Eshop\Core\Registry::getConfig()->getShopIds() as $shop) {
 	    	\OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar('str', 'wleWalleeAppKey', $appKey, $shop, \OxidEsales\Eshop\Core\Config::OXMODULE_MODULE_PREFIX . WalleeModule::instance()->getId());
 	    	\OxidEsales\Eshop\Core\Registry::getConfig()->saveShopConfVar('str', 'wleWalleeUserId', $userId, $shop, \OxidEsales\Eshop\Core\Config::OXMODULE_MODULE_PREFIX . WalleeModule::instance()->getId());
-        }
+    	}
     }
 }

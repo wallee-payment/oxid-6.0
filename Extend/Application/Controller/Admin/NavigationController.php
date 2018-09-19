@@ -38,7 +38,7 @@ class NavigationController extends NavigationController_parent
                         );
                         break;
                     default:
-                        WalleeModule::log(Logger::WARNING, "Unkown alert loaded from database: " . print_r($row, true));
+                        WalleeModule::log(Logger::WARNING, "Unkown alert loaded from database: " . array($row));
                 }
             }
         }

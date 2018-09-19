@@ -24,7 +24,7 @@ use Wle\Wallee\Core\WalleeModule;
  */
 abstract class AbstractJob extends \OxidEsales\Eshop\Core\Model\BaseModel
 {
-	protected $_aSkipSaveFields = ['oxtimestamp', 'WLEUPDATED'];
+	protected $_aSkipSaveFields = ['oxtimestamp', 'wleupdated'];
     private $sdkObject;
 
     /**

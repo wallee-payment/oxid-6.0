@@ -17,7 +17,7 @@ class Token extends \OxidEsales\Eshop\Core\Model\BaseModel
 {
 
 	private $_sTableName = 'wleWallee_token';
-	protected $_aSkipSaveFields = ['oxtimestamp', 'WLEUPDATED'];
+	protected $_aSkipSaveFields = ['oxtimestamp', 'wleupdated'];
 
     /**
      * Class constructor.

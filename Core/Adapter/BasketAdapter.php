@@ -156,7 +156,7 @@ class BasketAdapter implements ILineItemAdapter
     {
         $lineItem = new LineItemCreate();
         $lineItem->setName($basketItem->getTitle());
-        $lineItem->setUniqueId($basketItem->getBasketItemKey());
+        $lineItem->setUniqueId($this->basket->getItemKey($basketItem->getProductId()));
         $lineItem->setSku($basketItem->getProductId());
         $lineItem->setQuantity($basketItem->getAmount());
 

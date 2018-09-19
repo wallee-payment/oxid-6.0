@@ -46,7 +46,6 @@ class OrderController extends OrderController_parent
 
     public function wleConfirm()
     {
-    	// TODO stuff here
     	\OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
     	$order = oxNew(\OxidEsales\Eshop\Application\Model\Order::class);
         $response = array(
@@ -59,11 +58,12 @@ class OrderController extends OrderController_parent
                 $transaction = Transaction::loadPendingFromSession($this->getSession());
                 /* @var $order \Wle\Wallee\Extend\Application\Model\Order */
                 /** @noinspection PhpParamsInspection */
+                $order->setConfirming(true);
                 $state = $order->finalizeOrder($this->getBasket(), $this->getUser());
+                $order->setConfirming(false);
                 if ($state === 'WALLEE_' . TransactionState::PENDING) {
                     $transaction->setTempBasket($this->getBasket());
                     $transaction->setOrderId($order->getId());
-                    // TODO stuff here
                     \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
                     \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
                     $transaction->updateFromSession(true);
@@ -87,7 +87,7 @@ class OrderController extends OrderController_parent
                 $response['message'] = $e->getMessage();
             }
         } else {
-            $response['message'] = WalleeModule::instance()->translate("Not a WhiteLabenName order.");
+            $response['message'] = WalleeModule::instance()->translate("Not a wallee order.");
         }
 
         WalleeModule::renderJson($response);

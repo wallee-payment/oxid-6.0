@@ -29,7 +29,7 @@ $aModule = array(
         'en' => 'WLE Wallee Module'
     ),
     'thumbnail' => 'out/pictures/picture.png',
-    'version' => '1.0.10',
+    'version' => '1.0.11',
     'author' => 'customweb GmbH',
     'url' => 'https://www.customweb.com',
     'email' => 'info@customweb.com',
@@ -64,8 +64,8 @@ $aModule = array(
     'blocks' => array(
         array(
             'template' => 'page/checkout/order.tpl',
-            'block' => 'checkout_order_btn_confirm_bottom',
-            'file' => 'Application/views/blocks/wleWallee_checkout_order_btn_confirm_bottom.tpl'
+            'block' => 'shippingAndPayment',
+            'file' => 'Application/views/blocks/wleWallee_checkout_order_shippingAndPayment.tpl'
         ),
         array(
             'template' => 'page/checkout/order.tpl',
@@ -109,13 +109,7 @@ $aModule = array(
 		array(
 			'group' => 'wleWalleewalleeSettings',
 			'name' => 'wleWalleeAppKey',
-			'type' => 'str',
-			'value' => ''
-		),
-		array(
-			'group' => 'wleWalleewalleeSettings',
-			'name' => 'wleWalleeSpaceViewId',
-			'type' => 'str',
+			'type' => 'password',
 			'value' => ''
 		),
 		array(
@@ -142,6 +136,12 @@ $aModule = array(
 			'type' => 'select',
 			'value' => 'Error',
 			'constrains' => 'Error|Info|Debug'
+		),
+		array(
+			'group' => 'wleWalleeSpaceViewSettings',
+			'name' => 'wleWalleeSpaceViewId',
+			'type' => 'str',
+			'value' => ''
 		)
     ),
     'events' => array(

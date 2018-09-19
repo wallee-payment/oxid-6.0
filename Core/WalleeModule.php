@@ -147,6 +147,14 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
     
     /**
      *
+     * @return \OxidEsales\Eshop\Core\Utils
+     */
+    public static function getUtils() {
+    	return \OxidEsales\Eshop\Core\Registry::getUtils();
+    }
+    
+    /**
+     *
      * @return \OxidEsales\Eshop\Core\UtilsObject
      */
     public static function getUtilsObject() {
@@ -165,6 +173,16 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
     		return \OxidEsales\Eshop\Core\Registry::getUtilsView();
     	}
     	return \OxidEsales\Eshop\Core\Registry::get(\OxidEsales\Eshop\Core\UtilsView::class);
+    }
+    
+    /**
+     * Adds a message to the next rendered page.
+     * (Currently creates an error message)
+     * 
+     * @param string $message
+     */
+    public static function addMessage($message) {
+    	self::getUtilsView()->addErrorToDisplay($message);
     }
     
     public static function instance()
@@ -215,7 +233,6 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
      */
     public static function onActivate()
     {
-    	self::log(Logger::ERROR, __METHOD__);
         $bool = 0;
         $bool += self::_dbEvent('install.sql', 'Error activating module: ');
         $bool += self::migrate();
