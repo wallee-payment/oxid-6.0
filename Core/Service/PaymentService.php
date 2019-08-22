@@ -16,6 +16,9 @@ use Wallee\Sdk\Model\PaymentMethodConfiguration;
 use Wallee\Sdk\Service\PaymentMethodConfigurationService;
 use Wle\Wallee\Core\WalleeModule;
 use \Wallee\Sdk\Service\TransactionService as SdkTransactionService;
+use Wallee\Sdk\Model\EntityQueryFilter;
+use Wallee\Sdk\Model\EntityQueryFilterType;
+use Wallee\Sdk\Model\CriteriaOperator;
 
 /**
  * Class PaymentService
@@ -74,7 +77,7 @@ class PaymentService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function synchronize(){
-		$paymentMethods = $this->getConfigurationService()->search(WalleeModule::settings()->getSpaceId(), new EntityQuery());
+		$paymentMethods = $this->getConfigurationService()->search(WalleeModule::settings()->getSpaceId(), $this->getQueryFilter('state', \Wallee\Sdk\Model\CreationEntityState::ACTIVE));
 		
 		$paymentList = oxNew(\OxidEsales\Eshop\Application\Model\PaymentList::class);
 		/* @var $paymentList \Wle\Wallee\Extend\Application\Model\PaymentList */
@@ -93,7 +96,27 @@ class PaymentService extends AbstractService {
 			}
 		}
 	}
-
+	
+	private function getQueryFilter($fieldName, $fieldValue){
+		$query = new EntityQuery();
+		$filter = new EntityQueryFilter();
+		/**
+		 * @noinspection PhpParamsInspection
+		 */
+		$filter->setType(EntityQueryFilterType::LEAF);
+		/**
+		 * @noinspection PhpParamsInspection
+		 */
+		$filter->setOperator(CriteriaOperator::EQUALS);
+		$filter->setFieldName($fieldName);
+		/**
+		 * @noinspection PhpParamsInspection
+		 */
+		$filter->setValue($fieldValue);
+		$query->setFilter($filter);
+		return $query;
+	}
+	
 	/**
 	 *
 	 * @param $paymentId

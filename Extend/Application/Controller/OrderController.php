@@ -54,38 +54,43 @@ class OrderController extends OrderController_parent
         );
 
         if ($this->isWalleeTransaction()) {
-            try {
-                $transaction = Transaction::loadPendingFromSession($this->getSession());
-                /* @var $order \Wle\Wallee\Extend\Application\Model\Order */
-                /** @noinspection PhpParamsInspection */
-                $order->setConfirming(true);
-                $state = $order->finalizeOrder($this->getBasket(), $this->getUser());
-                $order->setConfirming(false);
-                if ($state === 'WALLEE_' . TransactionState::PENDING) {
-                    $transaction->setTempBasket($this->getBasket());
-                    $transaction->setOrderId($order->getId());
-                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
-                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
-                    $transaction->updateFromSession(true);
-                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
-                    $response['status'] = true;
-                } else if ($state == \OxidEsales\Eshop\Application\Model\Order::ORDER_STATE_ORDEREXISTS) {
-                    // ensure new order can be created
-                    $this->getSession()->deleteVariable('sess_challenge');
-                    throw new \Exception(WalleeModule::instance()->translate("Order already exists. Please check if you have already received a confirmation, then try again."));
-                } else {
-                    throw new \Exception(WalleeModule::instance()->translate("Unable to confirm order in state !state.", true, array('!state' => $state)));
-                }
-            } catch (\Exception $e) {
-                if (isset($transaction)) {
-                    $state = $transaction->getState();
-                } else if (!isset($state)) {
-                    $state = 'confirmation_error_unkown';
-                }
-                $order->WalleeFail($e->getMessage(), $state, true);
-                WalleeModule::log(Logger::ERROR, "Unable to confirm transaction: {$e->getMessage()}.");
-                $response['message'] = $e->getMessage();
-            }
+        	if($this->_validateTermsAndConditions()) {
+	            try {
+	                $transaction = Transaction::loadPendingFromSession($this->getSession());
+	                /* @var $order \Wle\Wallee\Extend\Application\Model\Order */
+	                /** @noinspection PhpParamsInspection */
+	                $order->setConfirming(true);
+	                $state = $order->finalizeOrder($this->getBasket(), $this->getUser());
+	                $order->setConfirming(false);
+	                if ($state === 'WALLEE_' . TransactionState::PENDING) {
+	                    $transaction->setTempBasket($this->getBasket());
+	                    $transaction->setOrderId($order->getId());
+	                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
+	                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
+	                    $transaction->updateFromSession(true);
+	                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
+	                    $response['status'] = true;
+	                } else if ($state == \OxidEsales\Eshop\Application\Model\Order::ORDER_STATE_ORDEREXISTS) {
+	                    // ensure new order can be created
+	                    $this->getSession()->deleteVariable('sess_challenge');
+	                    throw new \Exception(WalleeModule::instance()->translate("Order already exists. Please check if you have already received a confirmation, then try again."));
+	                } else {
+	                    throw new \Exception(WalleeModule::instance()->translate("Unable to confirm order in state !state.", true, array('!state' => $state)));
+	                }
+	            } catch (\Exception $e) {
+	                if (isset($transaction)) {
+	                    $state = $transaction->getState();
+	                } else if (!isset($state)) {
+	                    $state = 'confirmation_error_unkown';
+	                }
+	                $order->WalleeFail($e->getMessage(), $state, true);
+	                WalleeModule::log(Logger::ERROR, "Unable to confirm transaction: {$e->getMessage()}.");
+	                $response['message'] = $e->getMessage();
+	            }
+        	}
+        	else {
+        		$response['message'] = WalleeModule::instance()->translate("You must agree to the terms and conditions.");
+        	}
         } else {
             $response['message'] = WalleeModule::instance()->translate("Not a wallee order.");
         }

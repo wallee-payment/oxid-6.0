@@ -79,7 +79,10 @@ class AddressAdapter implements IAddressAdapter
         
         $birthdate = $address->getFieldData('oxbirthdate');
         if(!empty($birthdate) && $birthdate != '0000-00-00'){
-            $addressCreate->setDateOfBirth(new \DateTime($birthdate));
+        	$date = new \DateTime($birthdate);
+        	if(checkdate(intval($date->format('m')), intval($date->format('d')), intval($date->format('Y')))) {
+        		$addressCreate->setDateOfBirth($date);
+        	}
         }        
         $salutation = $address->getFieldData('oxsal');
         if (strtolower($salutation) === 'mr') {
