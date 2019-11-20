@@ -72,7 +72,7 @@ abstract class AbstractOrderRelated extends AbstractWebhook
 
     /**
      * @param $orderId
-     * @return Order
+     * @return \OxidEsales\Eshop\Application\Model\Order
      * @throws \Exception
      */
     protected function loadOrder($orderId)

@@ -19,6 +19,8 @@ use Wallee\Sdk\Model\TransactionPending;
 use Wallee\Sdk\Service\TransactionInvoiceService;
 use Wle\Wallee\Core\WalleeModule;
 use \Wallee\Sdk\Service\TransactionService as SdkTransactionService;
+use \Wallee\Sdk\Service\TransactionIframeService;
+use \Wallee\Sdk\Service\TransactionPaymentPageService;
 
 /**
  * Class TransactionService
@@ -29,6 +31,8 @@ use \Wallee\Sdk\Service\TransactionService as SdkTransactionService;
 class TransactionService extends AbstractService {
 	private $service;
 	private $invoiceService;
+	private $paymentPageService;
+	private $iframeService;
 
 	protected function getService(){
 		if (!$this->service) {
@@ -46,6 +50,28 @@ class TransactionService extends AbstractService {
 			$this->invoiceService = new TransactionInvoiceService(WalleeModule::instance()->getApiClient());
 		}
 		return $this->invoiceService;
+	}
+	
+	/**
+	 *
+	 * @return TransactionPaymentPageService
+	 */
+	protected function getPaymentPageService(){
+		if (!$this->paymentPageService) {
+			$this->paymentPageService = new TransactionPaymentPageService(WalleeModule::instance()->getApiClient());
+		}
+		return $this->paymentPageService;
+	}
+	
+	/**
+	 *
+	 * @return TransactionIframeService
+	 */
+	protected function getIframeService(){
+		if (!$this->iframeService) {
+			$this->iframeService = new TransactionIframeService(WalleeModule::instance()->getApiClient());
+		}
+		return $this->iframeService;
 	}
 
 	/**
@@ -97,7 +123,7 @@ class TransactionService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function getPaymentPageUrl($transactionId, $spaceId){
-		return $this->getService()->buildPaymentPageUrl($spaceId, $transactionId);
+		return $this->getPaymentPageService()->paymentPageUrl($spaceId, $transactionId);
 	}
 
 	/**
@@ -128,6 +154,6 @@ class TransactionService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function getJavascriptUrl($transactionId, $spaceId){
-		return $this->getService()->buildJavaScriptUrl($spaceId, $transactionId);
+		return $this->getIframeService()->javascriptUrl($spaceId, $transactionId);
 	}
 }

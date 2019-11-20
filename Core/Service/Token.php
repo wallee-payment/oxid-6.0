@@ -91,11 +91,9 @@ class Token extends AbstractService
     {
         $token = oxNew(\Wle\Wallee\Application\Model\Token::class);
         /* @var $token \Wle\Wallee\Application\Model\Token */
-        if ($token->loadByToken($spaceId, $tokenId)) {
-            return $token;
-        }
-        throw new \Exception("Unable to load token by token $tokenId in space $spaceId.");
-    }
+        $token->loadByToken($spaceId, $tokenId);
+        return $token;
+     }
 
     public function deleteToken($spaceId, $tokenId)
     {

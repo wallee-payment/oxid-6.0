@@ -41,7 +41,7 @@ class OptimisticLockingException extends \Exception {
 
 	public function __construct($id, $table, $query){
 		$this->query = $query;
-		parent::__construct("Optimistic locking failed for $table with id $id.");
+		parent::__construct("Optimistic locking failed for $table with id $id. [$query]");
 	}
 
 	public function getQueryString(){

@@ -68,14 +68,19 @@ class Transaction extends \OxidEsales\Eshop\Application\Controller\Admin\AdminDe
      */
     public function complete()
     {
+    	WalleeModule::log(Logger::DEBUG, "Start complete.");
         $oxid = $this->getEditObjectId();
         $transaction = oxNew(\Wle\Wallee\Application\Model\Transaction::class);
         /* @var $transaction \Wle\Wallee\Application\Model\Transaction */
         if ($transaction->loadByOrder($oxid)) {
+        	WalleeModule::log(Logger::DEBUG, "Loaded by order.");
             try {
-                $transaction->updateLineItems();
-                $job = CompletionService::instance()->create($transaction);
-                CompletionService::instance()->send($job);
+            	$transaction->updateLineItems();
+            	WalleeModule::log(Logger::DEBUG, "Updated items.");
+            	$job = CompletionService::instance()->create($transaction);
+            	WalleeModule::log(Logger::DEBUG, "Created job.");
+            	CompletionService::instance()->send($job);
+            	WalleeModule::log(Logger::DEBUG, "Sent job.");
                 if ($job->getState() === TransactionCompletionState::FAILED) {
                 	WalleeModule::getUtilsView()->addErrorToDisplay($job->getFailureReason());
                 } else {
@@ -98,13 +103,18 @@ class Transaction extends \OxidEsales\Eshop\Application\Controller\Admin\AdminDe
      */
     public function void()
     {
+    	WalleeModule::log(Logger::DEBUG, "Start void.");
         $oxid = $this->getEditObjectId();
         $transaction = oxNew(\Wle\Wallee\Application\Model\Transaction::class);
         /* @var $transaction \Wle\Wallee\Application\Model\Transaction */
         if ($transaction->loadByOrder($oxid)) {
-            try {
-                $job = VoidService::instance()->create($transaction);
-                VoidService::instance()->send($job);
+        	WalleeModule::log(Logger::DEBUG, "Loaded by order.");
+        	try {
+        		$transaction->pull();
+        		$job = VoidService::instance()->create($transaction);
+        		WalleeModule::log(Logger::DEBUG, "Created job.");
+        		VoidService::instance()->send($job);
+        		WalleeModule::log(Logger::DEBUG, "Sent job.");
                 if ($job->getState() === TransactionVoidState::FAILED) {
                 	WalleeModule::getUtilsView()->addErrorToDisplay($job->getFailureReason());
                 } else {

@@ -79,6 +79,7 @@ class Transaction extends AbstractOrderRelated
                     $cancel = true;
                 case TransactionState::DECLINE:
                 case TransactionState::FAILED:
+                	$order->setWalleeState($entity->getState());
                 	$order->WalleeFail($entity->getUserFailureMessage(), $entity->getState(), $cancel, true);
                 	return true;
                 default:
