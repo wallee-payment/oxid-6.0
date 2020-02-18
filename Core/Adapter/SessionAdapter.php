@@ -16,6 +16,8 @@ use Wallee\Sdk\Model\TransactionCreate;
 use Wallee\Sdk\Model\TransactionPending;
 use Wle\Wallee\Core\WalleeModule;
 use Wle\Wallee\Application\Model\Transaction;
+use Wallee\Sdk\Model\LineItemCreate;
+use Wallee\Sdk\Model\LineItemType;
 
 /**
  * Class SessionAdapter
@@ -73,6 +75,17 @@ class SessionAdapter implements ITransactionServiceAdapter {
 						array(
 							WalleeModule::extractWalleeId($order->oxorder__oxpaymenttype->value) 
 						));
+				$totalDifference = $this->getTotalsDifference($transactionPending->getLineItems(), $order);
+				if($totalDifference) {
+					if(WalleeModule::settings()->enforceLineItemConsistency()) {
+						throw new \Exception(WalleeModule::instance()->translate('Totals mismatch, please contact merchant or use another payment method.'));
+					}
+					else {
+						$lineItems = $transactionPending->getLineItems();
+						$lineItems[] = $this->createRoundingAdjustment($totalDifference);
+						$transactionPending->setLineItems($lineItems);
+					}
+				}
 			}
 		}
 		
@@ -93,4 +106,26 @@ class SessionAdapter implements ITransactionServiceAdapter {
 		$transaction->setSuccessUrl(WalleeModule::getControllerUrl('thankyou', null, null, true));
 		$transaction->setFailedUrl(WalleeModule::getControllerUrl('order', 'wleError', null, true));
 	}
+	
+	private function getTotalsDifference(array $lineItems, \OxidEsales\Eshop\Application\Model\Order $order) {
+		$total = 0;
+		foreach($lineItems as $lineItem) {
+			$total += $lineItem->getAmountIncludingtax();
+		}
+		return \OxidEsales\Eshop\Core\Registry::getUtils()->fRound($total - $order->getTotalOrderSum(), $order->getOrderCurrency());
+	}
+	
+	private function createRoundingAdjustment($amount)
+	{
+		$lineItem = new LineItemCreate();
+		/** @noinspection PhpParamsInspection */
+		$lineItem->setType(LineItemType::FEE);
+		$lineItem->setAmountIncludingTax($amount);
+		$lineItem->setName(WalleeModule::instance()->translate('Rounding Adjustment'));
+		$lineItem->setQuantity(1);
+		$lineItem->setUniqueId('rounding_adjustment');
+		$lineItem->setSku('rounding_adjustment');
+		return $lineItem;
+	}
+	
 }

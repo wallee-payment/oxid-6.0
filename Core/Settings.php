@@ -47,6 +47,10 @@ class Settings {
 	public function isDownloadPackingEnabled(){
 		return $this->getSetting('PackingDoc');
 	}
+	
+	public function enforceLineItemConsistency() {
+		return $this->getSetting('EnforceConsistency');
+	}
 
 	public function isEmailConfirmationActive() {
 	    return $this->getSetting('EmailConfirm');
