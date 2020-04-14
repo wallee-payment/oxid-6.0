@@ -29,7 +29,7 @@ $aModule = array(
         'en' => 'WLE Wallee Module'
     ),
     'thumbnail' => 'out/pictures/picture.png',
-    'version' => '1.0.20',
+    'version' => '1.0.21',
     'author' => 'customweb GmbH',
     'url' => 'https://www.customweb.com',
     'email' => 'info@customweb.com',
@@ -141,7 +141,7 @@ $aModule = array(
 			'name' => 'wleWalleeLogLevel',
 			'type' => 'select',
 			'value' => 'Error',
-			'constrains' => 'Error|Info|Debug'
+			'constraints' => 'Error|Info|Debug'
 		),
 		array(
 			'group' => 'wleWalleeSpaceViewSettings',
@@ -153,16 +153,5 @@ $aModule = array(
     'events' => array(
         'onActivate' => Wle\Wallee\Core\WalleeModule::class . '::onActivate',
         'onDeactivate' => Wle\Wallee\Core\WalleeModule::class . '::onDeactivate'
-    ),
-    'transaction_states' => array(
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::DECLINE,
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::FULFILL,
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::COMPLETED,
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::PENDING,
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::FAILED,
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::AUTHORIZED,
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::CONFIRMED,
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::VOIDED,
-        'WALLEE_' . \Wallee\Sdk\Model\TransactionState::PROCESSING
     )
 );
