@@ -22,7 +22,7 @@
 		</a>
 	</li>
 	<li>
-		<a href="https://github.com/wallee-payment/oxid-6.0/releases/tag/1.0.26/">
+		<a href="https://github.com/wallee-payment/oxid-6.0/releases/tag/1.0.27/">
 			Source
 		</a>
 	</li>
@@ -49,11 +49,30 @@
 					<div class="olist arabic">
 <ol class="arabic">
 <li>
-<p><a href="https://github.com/wallee-payment/oxid-6.0/releases/tag/1.0.26/">Download</a> the extension.</p>
+<p><a href="https://github.com/wallee-payment/oxid-6.0/releases/tag/1.0.27/">Download</a> the extension.</p>
 </li>
 <li>
 <p>Extract the files and upload them to the root directory of your store using FTP/SSH.</p>
 </li>
+<li>
+<p>Run on the same path via terminal (required on oxid 6.2 upwards) this command to install the plugin:<br/></p>
+</li>
+</ol>
+</div><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>composer require whitelabelshortcut/Wallee</code></pre>
+</div>
+</div><div class="paragraph">
+<p>If the plugin still don&#8217;t work you need to run these commands:</p>
+</div><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>./vendor/bin/oe-console oe:module:install source/modules/whitelabelshortcut/Wallee
+./vendor/bin/oe-console oe:module:install-configuration source/modules/whitelabelshortcut/Wallee
+./vendor/bin/oe-console oe:module:activate Wallee
+./vendor/bin/oe-console oe:module:apply-configuration</code></pre>
+</div>
+</div><div class="olist arabic">
+<ol class="arabic" start="4">
 <li>
 <p>Login to the backend of your OXID eSales store.</p>
 </li>
