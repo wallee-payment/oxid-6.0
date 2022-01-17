@@ -80,14 +80,10 @@ class Order extends Order_parent {
 					"Attempted to call " . __METHOD__ . " on non-Wallee order {$this->getId()}, skipping.");
 			return;
 		}
-		$basket = $this->getWalleeTransaction()->getTempBasket();
+		$basket = $this->getWalleeBasket();
 		$basket->onUpdate();
 		$basket->calculateBasket();
 		$res = $this->_sendOrderByEmail($this->getOrderUser(), $basket, $this->getPaymentType());
-		if ($res === self::ORDER_STATE_OK) {
-			$this->getWalleeTransaction()->setTempBasket(null);
-			$this->getWalleeTransaction()->save();
-		}
 	}
 
 	public function setWalleePaid(){
