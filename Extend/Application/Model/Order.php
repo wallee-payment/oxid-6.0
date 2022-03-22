@@ -110,11 +110,13 @@ class Order extends Order_parent {
 			return;
 		}
 		$transaction = oxNew(\Wle\Wallee\Application\Model\Transaction::class);
+
 		/* @var $transaction Transaction */
 		if ($transaction->loadByOrder($this->getId())) {
 			try {
 				$transaction->setFailureReason($message);
 				$transaction->save();
+				$this->resetCoupon();
 			}
 			catch (\Exception $e) {
 				// treat optimisticlockingexception equally.
@@ -140,6 +142,24 @@ class Order extends Order_parent {
 				throw $e;
 			}
 		}
+	}
+
+	private function resetCoupon() {
+		// have to reset the coupon to empty as they are already generated in the database
+		$userId = $this->getSession()->getUser()->getId();
+		$orderId = $this->getId();
+		$query = "UPDATE oxvouchers 
+			SET
+				oxorderid = '',
+				oxuserid = '',
+				oxdiscount = NULL,
+				oxdateused = NULL,
+				oxreserved = 0
+			WHERE 
+				oxorderid = '{$orderId}' AND
+				oxuserid = '{$userId}'";
+		WalleeModule::log(Logger::ERROR, "query {$query}.");
+		\OxidEsales\Eshop\Core\DatabaseProvider::getDb()->execute($query);
 	}
 
 	public function getWalleeDownloads(){
