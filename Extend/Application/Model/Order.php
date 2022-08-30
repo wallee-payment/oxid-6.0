@@ -158,7 +158,7 @@ class Order extends Order_parent {
 			WHERE 
 				oxorderid = '{$orderId}' AND
 				oxuserid = '{$userId}'";
-        WalleeModule::log(Logger::ERROR, "query {$query}.");
+		WalleeModule::log(Logger::ERROR, "query {$query}.");
 		\OxidEsales\Eshop\Core\DatabaseProvider::getDb()->execute($query);
 	}
 
