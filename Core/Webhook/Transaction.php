@@ -3,6 +3,7 @@
  * Wallee OXID
  *
  * This OXID module enables to process payments with Wallee (https://www.wallee.com/).
+ * @version 2
  *
  * @package Whitelabelshortcut\Wallee
  * @author customweb GmbH (http://www.customweb.com/)
