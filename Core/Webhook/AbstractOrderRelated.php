@@ -57,7 +57,7 @@ abstract class AbstractOrderRelated extends AbstractWebhook
 	        	if($i === self::OPTIMISTIC_RETRIES) {
 	        		throw $e;
 	        	}
-	        	sleep(1);
+	        	sleep(2);
 	        }
 	        catch (\Exception $e) {
 	            WalleeModule::log(Logger::ERROR, $e->getMessage() . ' - ' . $e->getTraceAsString());
