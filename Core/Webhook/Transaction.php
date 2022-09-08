@@ -15,13 +15,14 @@ use Monolog\Logger;
 use Wallee\Sdk\Model\TransactionState;
 use Wallee\Sdk\Service\TransactionService;
 use Wle\Wallee\Core\WalleeModule;
-use Wle\Wallee\Extend\Application\Model\Order;
 
 /**
  * Webhook processor to handle transaction state transitions.
  */
 class Transaction extends AbstractOrderRelated
 {
+    const PLUGIN_PREFIX = 'WALLEE_';
+
     /**
      * Retrieves the entity from Wallee via sdk.
      *
@@ -52,71 +53,55 @@ class Transaction extends AbstractOrderRelated
     }
 
     /**
-     * @param Order $order
-     * @param object $entity
+     * @param \OxidEsales\Eshop\Application\Model\Order $order
+     * @param \Wallee\Sdk\Model\Transaction|object $entity
      * @throws \Exception
      */
     protected function processOrderRelatedInner(\OxidEsales\Eshop\Application\Model\Order $order, $entity)
     {
-        $this->guardCheckCurrentOrderStatus($order, $entity);
+        $finalStates = [
+            self::PLUGIN_PREFIX . TransactionState::FAILED,
+            self::PLUGIN_PREFIX . TransactionState::VOIDED,
+            self::PLUGIN_PREFIX . TransactionState::DECLINE,
+            self::PLUGIN_PREFIX . TransactionState::FULFILL
+        ];
 
-        /* @var $entity \Wallee\Sdk\Model\Transaction */
+        $previousTransactionState = $order->getFieldData('oxtransstatus');
+
         /* @var $order \Wle\Wallee\Extend\Application\Model\Order */
-        if ($entity && $entity->getState() !== $order->getWalleeTransaction()->getState()) {
-            $cancel = false;
-            switch ($entity->getState()) {
-                case TransactionState::AUTHORIZED:
-                case TransactionState::FULFILL:
-                case TransactionState::COMPLETED:
-                    $oldState = $order->getFieldData('oxtransstatus');
-                    $order->setWalleeState($entity->getState());
-                    if (!WalleeModule::isAuthorizedState($oldState)) {
-                        $order->WalleeAuthorize();
-                    }
-                    return true;
-                case TransactionState::CONFIRMED:
-                case TransactionState::PROCESSING:
-                	$order->setWalleeState($entity->getState());
-                	return true;
-                case TransactionState::VOIDED:
-                    $cancel = true;
-                case TransactionState::DECLINE:
-                case TransactionState::FAILED:
-                	$order->setWalleeState($entity->getState());
-                	$order->WalleeFail($entity->getUserFailureMessage(), $entity->getState(), $cancel, true);
-                	return true;
-                default:
-                	return false;
+        if ($entity && !in_array($previousTransactionState, $finalStates)) {
+            $order->setWalleeState($entity->getState());
+            $order->getWalleeTransaction()->save();
+            $order->save();
+
+            if ($entity->getState() !== $order->getWalleeTransaction()->getState()) {
+                $cancel = false;
+                switch ($entity->getState()) {
+                    case TransactionState::AUTHORIZED:
+                    case TransactionState::FULFILL:
+                    case TransactionState::COMPLETED:
+                        $oldState = $order->getFieldData('oxtransstatus');
+                        $order->setWalleeState($entity->getState());
+                        if (!WalleeModule::isAuthorizedState($oldState)) {
+                            $order->WalleeAuthorize();
+                        }
+                        return true;
+                    case TransactionState::CONFIRMED:
+                    case TransactionState::PROCESSING:
+                        $order->setWalleeState($entity->getState());
+                        return true;
+                    case TransactionState::VOIDED:
+                        $cancel = true;
+                    case TransactionState::DECLINE:
+                    case TransactionState::FAILED:
+                        $order->setWalleeState($entity->getState());
+                        $order->WalleeFail($entity->getUserFailureMessage(), $entity->getState(), $cancel, true);
+                        return true;
+                    default:
+                        return false;
+                }
             }
         }
         return false;
-    }
-
-    /**
-     * Check if the local transaction state is updated with the wallee portal state.
-     * This void optimistic logic exception
-     * @param \OxidEsales\Eshop\Application\Model\Order $order
-     * @param \Wallee\Sdk\Model\Transaction|null $entity
-     * @return void
-     */
-    private function guardCheckCurrentOrderStatus(
-        \OxidEsales\Eshop\Application\Model\Order $order,
-        \Wallee\Sdk\Model\Transaction $entity = null
-    ) {
-        $finalStates = [
-            TransactionState::FAILED,
-            TransactionState::VOIDED,
-            TransactionState::DECLINE,
-            TransactionState::FULFILL
-        ];
-
-        $transactionState = $order->getWalleeTransaction()->getState();
-
-        if ($entity && !in_array($transactionState, $finalStates)) {
-            $order->setWalleeState($entity->getState());
-            $order->getWalleeTransaction()->save();
-
-            WalleeModule::log(Logger::DEBUG, "Void optimistic locking exception.");
-        }
     }
 }
