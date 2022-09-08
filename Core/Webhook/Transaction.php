@@ -21,8 +21,6 @@ use Wle\Wallee\Core\WalleeModule;
  */
 class Transaction extends AbstractOrderRelated
 {
-    const PLUGIN_PREFIX = 'WALLEE_';
-
     /**
      * Retrieves the entity from Wallee via sdk.
      *
@@ -59,47 +57,31 @@ class Transaction extends AbstractOrderRelated
      */
     protected function processOrderRelatedInner(\OxidEsales\Eshop\Application\Model\Order $order, $entity)
     {
-        $finalStates = [
-            self::PLUGIN_PREFIX . TransactionState::FAILED,
-            self::PLUGIN_PREFIX . TransactionState::VOIDED,
-            self::PLUGIN_PREFIX . TransactionState::DECLINE,
-            self::PLUGIN_PREFIX . TransactionState::FULFILL
-        ];
-
-        $previousTransactionState = $order->getFieldData('oxtransstatus');
-
-        /* @var $order \Wle\Wallee\Extend\Application\Model\Order */
-        if ($entity && !in_array($previousTransactionState, $finalStates)) {
-            $order->setWalleeState($entity->getState());
-            $order->getWalleeTransaction()->save();
-            $order->save();
-
-            if ($entity->getState() !== $order->getWalleeTransaction()->getState()) {
-                $cancel = false;
-                switch ($entity->getState()) {
-                    case TransactionState::AUTHORIZED:
-                    case TransactionState::FULFILL:
-                    case TransactionState::COMPLETED:
-                        $oldState = $order->getFieldData('oxtransstatus');
-                        $order->setWalleeState($entity->getState());
-                        if (!WalleeModule::isAuthorizedState($oldState)) {
-                            $order->WalleeAuthorize();
-                        }
-                        return true;
-                    case TransactionState::CONFIRMED:
-                    case TransactionState::PROCESSING:
-                        $order->setWalleeState($entity->getState());
-                        return true;
-                    case TransactionState::VOIDED:
-                        $cancel = true;
-                    case TransactionState::DECLINE:
-                    case TransactionState::FAILED:
-                        $order->setWalleeState($entity->getState());
-                        $order->WalleeFail($entity->getUserFailureMessage(), $entity->getState(), $cancel, true);
-                        return true;
-                    default:
-                        return false;
-                }
+        if ($entity->getState() !== $order->getWalleeTransaction()->getState()) {
+            $cancel = false;
+            switch ($entity->getState()) {
+                case TransactionState::AUTHORIZED:
+                case TransactionState::FULFILL:
+                case TransactionState::COMPLETED:
+                    $oldState = $order->getFieldData('oxtransstatus');
+                    $order->setWalleeState($entity->getState());
+                    if (!WalleeModule::isAuthorizedState($oldState)) {
+                        $order->WalleeAuthorize();
+                    }
+                    return true;
+                case TransactionState::CONFIRMED:
+                case TransactionState::PROCESSING:
+                    $order->setWalleeState($entity->getState());
+                    return true;
+                case TransactionState::VOIDED:
+                    $cancel = true;
+                case TransactionState::DECLINE:
+                case TransactionState::FAILED:
+                    $order->setWalleeState($entity->getState());
+                    $order->WalleeFail($entity->getUserFailureMessage(), $entity->getState(), $cancel, true);
+                    return true;
+                default:
+                    return false;
             }
         }
         return false;

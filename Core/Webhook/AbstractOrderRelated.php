@@ -19,8 +19,9 @@ use Wle\Wallee\Core\Exception\OptimisticLockingException;
  */
 abstract class AbstractOrderRelated extends AbstractWebhook
 {
-	const NO_ORDER = 1;
-	const OPTIMISTIC_RETRIES = 6;
+    const NO_ORDER = 1;
+    const OPTIMISTIC_RETRIES = 3;
+    const SECONDS_TO_WAIT = 1;
 
     /**
      * Processes the received order related webhook request.
@@ -57,7 +58,7 @@ abstract class AbstractOrderRelated extends AbstractWebhook
 	        	if($i === self::OPTIMISTIC_RETRIES) {
 	        		throw $e;
 	        	}
-	        	sleep(2);
+	        	sleep(self::SECONDS_TO_WAIT);
 	        }
 	        catch (\Exception $e) {
 	            WalleeModule::log(Logger::ERROR, $e->getMessage() . ' - ' . $e->getTraceAsString());

@@ -38,7 +38,8 @@ use Wle\Wallee\Core\Exception\OptimisticLockingException;
  * Transaction model.
  */
 class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
-	private $_sTableName = 'wleWallee_transaction';
+    const OPTIMISTIC_RETRIES = 5;
+    private $_sTableName = 'wleWallee_transaction';
 	private $version = false;
 	protected $dbVersion = null;
 	/**
@@ -591,18 +592,28 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 		if (!$dbVersion) {
 			$dbVersion = 0;
 		}
-		$updateQuery = "update {$coreTableName} set " . $this->_getUpdateFields() . " , wleversion=wleversion + 1 " .
-				 " where {$coreTableName}.oxid = " . $database->quote($this->getId()) .
-				 " and {$coreTableName}.wleversion = {$dbVersion}";
-		WalleeModule::log(Logger::DEBUG, "Updating  transaction with query [$updateQuery]");
-		
-		$this->beforeUpdate();
-		$affected = \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->execute($updateQuery);
-		
-		if ($affected === 0) {
-			throw new OptimisticLockingException($this->getId(), $this->_sTableName, $updateQuery);
-		}
-		
+
+        $index = 0;
+        do {
+            $updateQuery = "update {$coreTableName} set " . $this->_getUpdateFields() . " , wleversion=wleversion + 1 " .
+                " where {$coreTableName}.oxid = " . $database->quote($this->getId()) .
+                " and {$coreTableName}.wleversion = {$dbVersion}";
+            WalleeModule::log(Logger::DEBUG, "Updating  transaction with query [$updateQuery]");
+
+            $this->beforeUpdate();
+            $affected = \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->execute($updateQuery);
+
+            if ($index === self::OPTIMISTIC_RETRIES) {
+                break;
+            }
+            $index++;
+
+        } while ($affected === 0);
+
+        if ($affected === 0) {
+            throw new OptimisticLockingException($this->getId(), $this->_sTableName, $updateQuery);
+        }
+
 		return true;
 	}
 }
