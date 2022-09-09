@@ -38,7 +38,7 @@ use Wle\Wallee\Core\Exception\OptimisticLockingException;
  * Transaction model.
  */
 class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
-    const OPTIMISTIC_RETRIES = 5;
+    const OPTIMISTIC_RETRIES = 10;
     private $_sTableName = 'wleWallee_transaction';
 	private $version = false;
 	protected $dbVersion = null;
@@ -604,6 +604,7 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
             $affected = \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->execute($updateQuery);
 
             if ($index === self::OPTIMISTIC_RETRIES) {
+                $affected = $index;
                 break;
             }
             $index++;
