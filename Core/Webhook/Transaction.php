@@ -57,14 +57,25 @@ class Transaction extends AbstractOrderRelated
      */
     protected function processOrderRelatedInner(\OxidEsales\Eshop\Application\Model\Order $order, $entity)
     {
+        $finalStates = [
+            TransactionState::FAILED,
+            TransactionState::VOIDED,
+            TransactionState::DECLINE,
+            TransactionState::FULFILL
+        ];
+
+        if (in_array($entity->getState(), $finalStates)) {
+            return false;
+        }
+
         if ($entity->getState() !== $order->getWalleeTransaction()->getState()) {
             $cancel = false;
             switch ($entity->getState()) {
                 case TransactionState::AUTHORIZED:
                 case TransactionState::FULFILL:
                 case TransactionState::COMPLETED:
-                    $oldState = $order->getFieldData('oxtransstatus');
                     $order->setWalleeState($entity->getState());
+                    $oldState = $order->getFieldData('oxtransstatus');
                     if (!WalleeModule::isAuthorizedState($oldState)) {
                         $order->WalleeAuthorize();
                     }

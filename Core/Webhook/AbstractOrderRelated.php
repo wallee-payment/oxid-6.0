@@ -35,7 +35,7 @@ abstract class AbstractOrderRelated extends AbstractWebhook
         }
         for($i = 0; $i <= self::OPTIMISTIC_RETRIES; $i++) {
 	        try {
-	        	\OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
+	        	//\OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
 	            $entity = $this->loadEntity($request);
 	            $orderId = $this->getOrderId($entity);
 	            $order = $this->loadOrder($orderId);
@@ -51,7 +51,7 @@ abstract class AbstractOrderRelated extends AbstractWebhook
 		            }
 	            }
 	            
-	            \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
+	            //\OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
 	        }catch(OptimisticLockingException $e){
 	        	WalleeModule::log(Logger::WARNING, "Optimistic locking query: " . $e->getQueryString());
 	        	WalleeModule::rollback();
