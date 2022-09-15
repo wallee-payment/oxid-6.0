@@ -15,6 +15,7 @@ use Monolog\Logger;
 use Wallee\Sdk\Model\RefundState;
 use Wallee\Sdk\Model\TransactionCompletionState;
 use Wallee\Sdk\Model\TransactionVoidState;
+use Wle\Wallee\Core\Exception\OptimisticLockingException;
 use Wle\Wallee\Core\Service\CompletionService;
 use Wle\Wallee\Core\Service\RefundService;
 use Wle\Wallee\Core\Service\VoidService;
@@ -57,6 +58,9 @@ class Transaction extends \OxidEsales\Eshop\Application\Controller\Admin\AdminDe
             } else {
                 throw new \Exception(WalleeModule::instance()->translate('No order selected'));
             }
+        } catch (OptimisticLockingException $e) {
+            $this->_aViewData['wle_wallee_enabled'] = $e->getMessage();
+            return $this->_sThisTemplate;
         } catch (\Exception $e) {
             $this->_aViewData['wle_error'] = $e->getMessage();
             return 'wleWalleeError.tpl';

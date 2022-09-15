@@ -595,10 +595,10 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 				 " where {$coreTableName}.oxid = " . $database->quote($this->getId()) .
 				 " and {$coreTableName}.wleversion = {$dbVersion}";
 		WalleeModule::log(Logger::DEBUG, "Updating  transaction with query [$updateQuery]");
-		
+
 		$this->beforeUpdate();
 		$affected = \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->execute($updateQuery);
-		
+
 		if ($affected === 0) {
 			throw new OptimisticLockingException($this->getId(), $this->_sTableName, $updateQuery);
 		}
