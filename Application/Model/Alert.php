@@ -11,7 +11,6 @@
 
 namespace Wle\Wallee\Application\Model;
 
-;
 
 /**
  * Class Alert.
@@ -42,15 +41,5 @@ class Alert
     public static function loadAll() {
         $query = "SELECT `WLEKEY`, `WLECOUNT`, `WLEFUNC`, `WLETARGET` FROM `wleWallee_alert`";
         return \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->getAll($query);
-    }
-
-    /**
-     * Class constructor.
-     */
-    public function __construct()
-    {
-        parent::__construct();
-
-        $this->init(self::getTableName());
     }
 }
