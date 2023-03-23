@@ -101,7 +101,7 @@ class Order extends Order_parent {
 		$currentState = substr($this->getFieldData('OXTRANSSTATUS'), strlen('WALLEE_'));
 		$transaction = $this->getWalleeTransaction();
 
-		if ($currentState === TransactionState::AUTHORIZED && !$transaction->getEmailSent()) {
+		if (!$transaction->getEmailSent()) {
 			return true;
 		}
 
