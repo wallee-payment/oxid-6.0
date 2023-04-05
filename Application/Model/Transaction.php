@@ -516,6 +516,7 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 		$update = new TransactionLineItemVersionCreate();
 		$update->setLineItems($adapter->getLineItemData());
 		$update->setTransaction($this->getTransactionId());
+	    	$update->setExternalId(uniqid($this->getTransactionId()));
 		TransactionService::instance()->updateLineItems($this->getSpaceId(), $update);
 		$this->pull();
 		WalleeModule::log(Logger::DEBUG, "Complete update line items.");
