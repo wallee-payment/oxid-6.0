@@ -29,7 +29,7 @@ $aModule = array(
         'en' => 'WLE Wallee Module'
     ),
     'thumbnail' => 'out/pictures/picture.png',
-    'version' => '1.0.46',
+    'version' => '1.0.47',
     'author' => 'customweb GmbH',
     'url' => 'https://www.customweb.com',
     'email' => 'info@customweb.com',
@@ -148,7 +148,13 @@ $aModule = array(
 			'name' => 'wleWalleeSpaceViewId',
 			'type' => 'str',
 			'value' => ''
-		)
+		),
+        array(
+            'group' => 'wleWalleeShopSettings',
+			'name' => 'wleWalleeMigration',
+			'type' => 'num',
+			'value' => 0,
+        )
     ),
     'events' => array(
         'onActivate' => Wle\Wallee\Core\WalleeModule::class . '::onActivate',
