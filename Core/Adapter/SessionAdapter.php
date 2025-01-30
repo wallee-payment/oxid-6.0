@@ -110,7 +110,13 @@ class SessionAdapter implements ITransactionServiceAdapter {
 	private function getTotalsDifference(array $lineItems, \OxidEsales\Eshop\Application\Model\Order $order) {
 		$total = 0;
 		foreach($lineItems as $lineItem) {
-			$total += $lineItem->getAmountIncludingtax();
+
+			if ($lineItem->getType() === \Wallee\Sdk\Model\LineItemType::DISCOUNT) {
+				// convert negative values to positive in order to be able to subtract it.
+				$total -= abs( $lineItem->getAmountIncludingTax() );
+			} else {
+				$total += $lineItem->getAmountIncludingTax();
+			}
 		}
 		return \OxidEsales\Eshop\Core\Registry::getUtils()->fRound($total - $order->getTotalOrderSum(), $order->getOrderCurrency());
 	}
