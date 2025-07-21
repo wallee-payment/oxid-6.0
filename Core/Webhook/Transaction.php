@@ -74,20 +74,28 @@ class Transaction extends AbstractOrderRelated
             $cancel = false;
             switch ($entity->getState()) {
                 case TransactionState::AUTHORIZED:
-                case TransactionState::FULFILL:
                 case TransactionState::COMPLETED:
+                    // Authorization only for deferred payment methods
                     $oldState = $order->getFieldData('oxtransstatus');
                     $order->setWalleeState($entity->getState());
                     if (!WalleeModule::isAuthorizedState($oldState)) {
                         $order->WalleeAuthorize();
                     }
                     return true;
+
+                case \Wallee\Sdk\Model\TransactionState::FULFILL:
+                    // Authorization part is moved to TransactionCompletion
+                    $order->setWalleePaid();
+                    return true;
+
                 case TransactionState::CONFIRMED:
                 case TransactionState::PROCESSING:
                 	$order->setWalleeState($entity->getState());
                 	return true;
+
                 case TransactionState::VOIDED:
                     $cancel = true;
+
                 case TransactionState::DECLINE:
                 case TransactionState::FAILED:
                 	$order->setWalleeState($entity->getState());

@@ -24,8 +24,6 @@ class Webhook extends \OxidEsales\Eshop\Core\Controller\BaseController
 {
 	public function notify()
 	{
-        header("HTTP/1.1 500 Internal Server Error");
-        ob_start();
         $webhookService = new WebhookService();
 
         $requestBody = trim(file_get_contents("php://input"));
@@ -53,12 +51,6 @@ class Webhook extends \OxidEsales\Eshop\Core\Controller\BaseController
             WalleeModule::log(Logger::ERROR, $message);
             WalleeModule::getUtilsView()->addErrorToDisplay($message);
             exit();
-        }
-        header("HTTP/1.1 200 OK");
-        $stuff = ob_get_contents();
-        ob_end_clean();
-        if($stuff) {
-            WalleeModule::log(Logger::WARNING, "Webhook process output was caught and not removed: $stuff");
         }
 
         exit();

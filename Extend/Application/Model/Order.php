@@ -34,7 +34,7 @@ class Order extends Order_parent {
 		TransactionState::FULFILL => 6,
 		TransactionState::DECLINE => 6,
 		TransactionState::VOIDED => 6,
-		TransactionState::FAILED => 6 
+		TransactionState::FAILED => 6
 	];
 
 	public function setConfirming($confirming = true){
@@ -205,20 +205,20 @@ class Order extends Order_parent {
 					array(
 						TransactionState::COMPLETED,
 						TransactionState::FULFILL,
-						TransactionState::DECLINE 
+						TransactionState::DECLINE
 					))) {
 				if (WalleeModule::settings()->isDownloadInvoiceEnabled()) {
 					$downloads[] = array(
 						'link' => WalleeModule::getControllerUrl('wle_wallee_Pdf', 'invoice',
 								$this->getId()),
-						'text' => WalleeModule::instance()->translate('Download Invoice') 
+						'text' => WalleeModule::instance()->translate('Download Invoice')
 					);
 				}
 				if (WalleeModule::settings()->isDownloadPackingEnabled()) {
 					$downloads[] = array(
 						'link' => WalleeModule::getControllerUrl('wle_wallee_Pdf', 'packingSlip',
 								$this->getId()),
-						'text' => WalleeModule::instance()->translate('Download Packing Slip') 
+						'text' => WalleeModule::instance()->translate('Download Packing Slip')
 					);
 				}
 			}
@@ -230,7 +230,7 @@ class Order extends Order_parent {
 		if (!$this->isWleOrder($oBasket)) {
 			return $this->_Order_finalizeOrder_parent($oBasket, $oUser, $blRecalculatingOrder);
 		}
-		
+
 		if ($this->getFieldData('oxtransstatus') === 'WALLEE_' . TransactionState::PENDING) {
 			if ($this->confirming) {
 				return self::ORDER_STATE_OK;
@@ -244,18 +244,18 @@ class Order extends Order_parent {
 				return self::ORDER_STATE_PAYMENTERROR;
 			}
 		}
-		
+
 		$result = $this->_Order_finalizeOrder_parent($oBasket, $oUser, $blRecalculatingOrder);
-		
+
 		if ($result == self::ORDER_STATE_OK && !$blRecalculatingOrder) {
 			$result = 'WALLEE_' . TransactionState::PENDING;
 			$this->_setOrderStatus($result);
-			
+
 			// update transaction, confirm transaction, and redirect away
 			if (!$this->confirming) {
 				WalleeModule::log(Logger::ERROR, "Attempted to finalize order without confirmation. Redirecting to payment page.",
 						array(
-							$this 
+							$this
 						));
 				$transaction = Transaction::loadPendingFromSession($this->getSession());
 				$transaction->setTempBasket($this->getBasket());
@@ -265,7 +265,7 @@ class Order extends Order_parent {
 				exit();
 			}
 		}
-		
+
 		return $result;
 	}
 
@@ -274,11 +274,27 @@ class Order extends Order_parent {
 	}
 
 	protected function _sendOrderByEmail($oUser = null, $oBasket = null, $oPayment = null){
-		if ($this->isWleOrder() && (!WalleeModule::isAuthorizedState($this->getFieldData('oxtransstatus')) ||
-				 !WalleeModule::settings()->isEmailConfirmationActive())) {
-			return self::ORDER_STATE_OK;
+
+		$isWleOrder = $this->isWleOrder();
+		$isSettingEnabled = WalleeModule::settings()->isEmailConfirmationActive();
+
+		if ($isWleOrder && $isSettingEnabled) {
+			try {
+				$transaction = Transaction::loadPendingFromSession($this->getSession());
+				if ($transaction === null) {
+					return self::ORDER_STATE_OK;
+				}
+
+				$sdkTransaction = $transaction->getSdkTransaction();
+				$state = $sdkTransaction->getState();
+				if (!WalleeModule::isAuthorizedState($state)) {
+					return self::ORDER_STATE_OK;
+				}
+			} catch (\Exception $e) {
+				// OK, It's an edge case. Let's send email for webhook, we validated it earlier.
+			}
 		}
-		
+
 		return $this->_Order_sendOrderByEmail_parent($oUser, $oBasket, $oPayment);
 	}
 
@@ -286,11 +302,11 @@ class Order extends Order_parent {
 		$basketItem = oxNew(\OxidEsales\Eshop\Application\Model\BasketItem::class);
 		/* @var $basketItem \Wle\Wallee\Extend\Application\Model\BasketItem */
 		$basketItem->wleDisableCheckProduct(true);
-		
+
 		$result = $this->_sendOrderByEmail($oUser, $oBasket, $oPayment);
-		
+
 		$basketItem->wleDisableCheckProduct(false);
-		
+
 		return $result;
 	}
 

@@ -33,39 +33,21 @@ abstract class AbstractOrderRelated extends AbstractWebhook
         if ($request->getSpaceId() != WalleeModule::settings()->getSpaceId()) {
             throw new \Exception("Received webhook with space id {$request->getSpaceId()} in store which is configured for space id " . WalleeModule::settings()->getSpaceId());
         }
-        for($i = 0; $i <= self::OPTIMISTIC_RETRIES; $i++) {
-	        try {
-	            $entity = $this->loadEntity($request);
-	            $orderId = $this->getOrderId($entity);
-	            $order = $this->loadOrder($orderId);
-	            \OxidEsales\Eshop\Core\Registry::getLang()->setBaseLanguage($order->getOrderLanguage());
-	            
-	            if(!$order->getWalleeTransaction() || !$order->getWalleeTransaction()->getId()){
-	            	throw new \Exception("Transaction could not be loaded on order.");
-	            }
-	            
-	            if($this->processOrderRelatedInner($order, $entity)) {
-		            if(!$order->getWalleeTransaction()->save() || !$order->save()) {
-		            	throw new \Exception('Unable to save order');
-		            }
-	            }
-	            
-	        }catch(OptimisticLockingException $e){
-	        	WalleeModule::log(Logger::WARNING, "Optimistic locking query: " . $e->getQueryString());
-	        	WalleeModule::rollback();
-	        	if($i === self::OPTIMISTIC_RETRIES) {
-	        		throw $e;
-	        	}
-	        	sleep(self::SECONDS_TO_WAIT);
-	        }
-	        catch (\Exception $e) {
-	            WalleeModule::log(Logger::ERROR, $e->getMessage() . ' - ' . $e->getTraceAsString());
-	            WalleeModule::rollback();
-	            if($e->getCode() !== self::NO_ORDER) {
-	            	throw $e;
-	            }
-        	}
-        }
+
+		$entity = $this->loadEntity($request);
+		$orderId = $this->getOrderId($entity);
+		$order = $this->loadOrder($orderId);
+		\OxidEsales\Eshop\Core\Registry::getLang()->setBaseLanguage($order->getOrderLanguage());
+
+		if(!$order->getWalleeTransaction() || !$order->getWalleeTransaction()->getId()){
+			throw new \Exception("Transaction could not be loaded on order.");
+		}
+
+		if($this->processOrderRelatedInner($order, $entity)) {
+			if(!$order->getWalleeTransaction()->save() || !$order->save()) {
+				throw new \Exception('Unable to save order');
+			}
+		}
     }
 
 

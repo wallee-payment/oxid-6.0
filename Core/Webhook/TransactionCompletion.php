@@ -10,6 +10,7 @@
  */
 namespace Wle\Wallee\Core\Webhook;
 
+use Wallee\Sdk\Model\TransactionState;
 use Wallee\Sdk\Model\TransactionCompletionState;
 use Wallee\Sdk\Service\TransactionCompletionService;
 use Wle\Wallee\Application\Model\CompletionJob;
@@ -93,6 +94,12 @@ class TransactionCompletion extends AbstractOrderRelated
         }
         $order->getWalleeTransaction()->pull();
         $order->setWalleeState($order->getWalleeTransaction()->getState());
+
+        // Twint and immediate payments. Marks order as authorized, sends confirmation email
+        $status = $order->getFieldData('oxtransstatus');
+        if ($status !== 'WALLEE_' . TransactionState::AUTHORIZED) {
+            $order->WalleeAuthorize();
+        }
     }
 
     /**
