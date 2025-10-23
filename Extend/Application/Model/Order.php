@@ -45,7 +45,23 @@ class Order extends Order_parent {
 		// copied from recalculateOrder, minus call of finalizeOrder, and adding new articles.
 		$oBasket = $this->_getOrderBasket();
 		/* @noinspection PhpParamsInspection */
-		$this->_addOrderArticlesToBasket($oBasket, $this->getOrderArticles(true));
+		$orderArticles = $this->getOrderArticles(true);
+		// Here we populate the basket with Articles, not OrderArticles as the email templates expect the Article
+		// Article = a product as it is in the catalog. This can change (price, image etc)
+		// OrderArticle = a snapshot of the product at the time of ordering. This is fixed
+		foreach ($orderArticles as $oOrderArticle) {
+			$oArticle = new \OxidEsales\Eshop\Application\Model\Article();
+			if ($oOrderArticle->oxorderarticles__oxbundleid->value) {
+				// This is a bundle sub-item, skip it
+				continue;
+			}
+			if ($oArticle->load($oOrderArticle->oxorderarticles__oxartid->value)) {
+				$amount = (float) $oOrderArticle->oxorderarticles__oxamount->value;
+				if ($amount > 0) {
+					$oBasketItem = $oBasket->addToBasket($oArticle->getId(), $amount, null, $oOrderArticle->getPersParams(), false, $oOrderArticle->isBundle());
+				}
+			}
+		}
 		$oBasket->calculateBasket(true);
 		return $oBasket;
 	}
