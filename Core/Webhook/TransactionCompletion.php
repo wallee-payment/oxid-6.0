@@ -94,6 +94,7 @@ class TransactionCompletion extends AbstractOrderRelated
         }
         $order->getWalleeTransaction()->pull();
         $order->setWalleeState($order->getWalleeTransaction()->getState());
+        $order->setWalleePaid();
 
         // Twint and immediate payments. Marks order as authorized, sends confirmation email
         $status = $order->getFieldData('oxtransstatus');

@@ -140,6 +140,11 @@ class Order extends Order_parent {
 	public function setWalleePaid(){
 		if (!$this->isWleOrder()) {
 			WalleeModule::log(Logger::WARNING,
+					"Order {$this->getId()} already has oxpaid set, skipping re-assignment.");
+			return;
+		}
+		if ($this->getFieldData('oxpaid') !== '0000-00-00 00:00:00') {
+			WalleeModule::log(Logger::INFO,
 					"Attempted to call " . __METHOD__ . " on non-Wallee order {$this->getId()}, skipping.");
 			return;
 		}
