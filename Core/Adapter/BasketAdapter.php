@@ -83,7 +83,8 @@ class BasketAdapter implements ILineItemAdapter
                     'id' => $voucher['serie']->oxvoucherseries__oxid->value . '_' . $basketItem->getProductId(),
                     'code' => $voucher['voucher']->oxvouchers__oxvouchernr->value,
                     'price' => $price,
-                    'vat' => $basketItem->getPrice()->getVat()
+                    'vat' => $basketItem->getPrice()->getVat(),
+                    'type' => $voucher['serie']->oxvoucherseries__oxdiscounttype->value
                 );
             }
 
@@ -133,7 +134,12 @@ class BasketAdapter implements ILineItemAdapter
         $lineItem = new LineItemCreate();
         /** @noinspection PhpParamsInspection */
         $lineItem->setType(LineItemType::FEE);
-        $price = $discount['price'] * -1 * (1 + ($discount['vat'] / 100));
+        // Here we need to determine if the voucher is percent or absolute as VAT is applied differently by the shop (if present on a voucher)
+        if ($discount['type'] == 'percent') {
+            $price = $discount['price'] * -1 * (1 + ($discount['vat'] / 100));
+        } else {
+            $price = $discount['price'] * -1;
+        }
         $lineItem->setAmountIncludingTax(\OxidEsales\Eshop\Core\Registry::getUtils()->fRound($price, $this->basket->getBasketCurrency()));
         $lineItem->setName('Voucher ' . $discount['code']);
         $lineItem->setQuantity(1);
