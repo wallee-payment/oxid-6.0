@@ -42,6 +42,11 @@ class Order extends Order_parent {
 	}
 
 	public function getWalleeBasket(){
+		$conf = \OxidEsales\Eshop\Core\Registry::getConfig();
+		$origSetting = $conf->getConfigParam('blUseStock');
+		// Disable stock rules in case stock is now below 1
+		$conf->setConfigParam('blUseStock', false);
+
 		// copied from recalculateOrder, minus call of finalizeOrder, and adding new articles.
 		$oBasket = $this->_getOrderBasket();
 		/* @noinspection PhpParamsInspection */
@@ -62,6 +67,7 @@ class Order extends Order_parent {
 				}
 			}
 		}
+		$conf->setConfigParam('blUseStock', $origSetting);
 		$oBasket->calculateBasket(true);
 		return $oBasket;
 	}

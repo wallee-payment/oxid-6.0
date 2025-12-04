@@ -13,6 +13,7 @@ namespace Wle\Wallee\Core\Webhook;
 use Monolog\Logger;
 use Wle\Wallee\Core\WalleeModule;
 use Wle\Wallee\Core\Exception\OptimisticLockingException;
+use Wle\Wallee\Core\Exception\OrderNotFoundException;
 
 /**
  * Abstract webhook processor for order related entities.
@@ -36,7 +37,18 @@ abstract class AbstractOrderRelated extends AbstractWebhook
 
 		$entity = $this->loadEntity($request);
 		$orderId = $this->getOrderId($entity);
-		$order = $this->loadOrder($orderId);
+        try {
+            $order = $this->loadOrder($orderId);
+        }
+        catch (OrderNotFoundException $e) {
+            if ($entity->getModelName() == 'Transaction' && ($entity->getState() == 'FAILED' || $entity->getState() == 'PENDING')) {
+                // For FAILED state, most likely the order was never created. So we just log and ignore.
+                WalleeModule::log(Logger::INFO, "Ignoring failed webhook for non existing order with id $orderId.");
+                return;
+            }
+            WalleeModule::log(Logger::ERROR, "Could not load order with id $orderId for webhook processing: " . $e->getMessage());
+            throw $e;
+        }
 		\OxidEsales\Eshop\Core\Registry::getLang()->setBaseLanguage($order->getOrderLanguage());
 
 		if(!$order->getWalleeTransaction() || !$order->getWalleeTransaction()->getId()){
@@ -58,13 +70,13 @@ abstract class AbstractOrderRelated extends AbstractWebhook
      */
     protected function loadOrder($orderId)
     {
-    	WalleeModule::getUtilsObject()->resetInstanceCache(\OxidEsales\Eshop\Application\Model\Order::class);
+        WalleeModule::getUtilsObject()->resetInstanceCache(\OxidEsales\Eshop\Application\Model\Order::class);
         $order = oxNew(\OxidEsales\Eshop\Application\Model\Order::class);
         /* @var $order \Wle\Wallee\Extend\Application\Model\Order */
         if ($order->load($orderId) && $order->isWleOrder()) {
             return $order;
         }
-        throw new \Exception("Could not load order by id $orderId.", self::NO_ORDER);
+        throw new OrderNotFoundException("Could not load order by id $orderId.", self::NO_ORDER);
     }
 
     /**
