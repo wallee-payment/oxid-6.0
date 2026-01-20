@@ -57,21 +57,12 @@ class Transaction extends AbstractOrderRelated
      */
     protected function processOrderRelatedInner(\OxidEsales\Eshop\Application\Model\Order $order, $entity)
     {
-        $finalStates = [
-            TransactionState::FAILED,
-            TransactionState::VOIDED,
-            TransactionState::DECLINE,
-            TransactionState::FULFILL
-        ];
-
-        /* @var $entity \Wallee\Sdk\Model\Transaction */
-        if (in_array($entity->getState(), $finalStates)) {
-            return false;
-        }
-
         /* @var $order \Wle\Wallee\Extend\Application\Model\Order */
-        if ($entity && $entity->getState() !== $order->getWalleeTransaction()->getState()) {
-            $cancel = false;
+        if (
+            $entity && (
+            $entity->getState() !== $order->getWalleeTransaction()->getState() ||
+            $entity->getState() !== $order->getCurrentOrderState()))
+            {
             switch ($entity->getState()) {
                 case TransactionState::AUTHORIZED:
                 case TransactionState::COMPLETED:
@@ -84,9 +75,7 @@ class Transaction extends AbstractOrderRelated
                     return true;
 
                 case \Wallee\Sdk\Model\TransactionState::FULFILL:
-                    // Authorization part is moved to TransactionCompletion
-                    $order->setWalleePaid();
-                    return true;
+                    return false;
 
                 case TransactionState::CONFIRMED:
                 case TransactionState::PROCESSING:
@@ -94,12 +83,13 @@ class Transaction extends AbstractOrderRelated
                 	return true;
 
                 case TransactionState::VOIDED:
-                    $cancel = true;
+                    return false;
 
                 case TransactionState::DECLINE:
                 case TransactionState::FAILED:
                 	$order->setWalleeState($entity->getState());
-                	$order->WalleeFail($entity->getUserFailureMessage(), $entity->getState(), $cancel, true);
+                    $order->resetCoupon();
+                    $order->getSession()->deleteVariable("sess_challenge");
                 	return true;
                 default:
                 	return false;

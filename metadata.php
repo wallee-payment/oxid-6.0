@@ -29,7 +29,7 @@ $aModule = array(
         'en' => 'WLE Wallee Module'
     ),
     'thumbnail' => 'out/pictures/picture.png',
-    'version' => '1.0.53',
+    'version' => '1.0.54',
     'author' => 'customweb GmbH',
     'url' => 'https://www.customweb.com',
     'email' => 'info@customweb.com',
@@ -54,7 +54,6 @@ $aModule = array(
         'wle_wallee_Alert' => Wle\Wallee\Application\Controller\Admin\Alert::class
     ),
     'templates' => array(
-        'wleWalleeCheckoutBasket.tpl' => 'wle/Wallee/Application/views/pages/wleWalleeCheckoutBasket.tpl',
         'wleWalleeCron.tpl' => 'wle/Wallee/Application/views/pages/wleWalleeCron.tpl',
         'wleWalleeError.tpl' => 'wle/Wallee/Application/views/pages/wleWalleeError.tpl',
         'wleWalleeTransaction.tpl' => 'wle/Wallee/Application/views/admin/tpl/wleWalleeTransaction.tpl',
@@ -62,6 +61,11 @@ $aModule = array(
         'wleWalleeOrderList.tpl' => 'wle/Wallee/Application/views/admin/tpl/wleWalleeOrderList.tpl',
     ),
     'blocks' => array(
+        array(
+            'template' => 'page/checkout/basket.tpl',
+            'block'    => 'checkout_basket_main',
+            'file'     => 'Application/views/blocks/wleWallee_device_script.tpl',
+        ),
         array(
             'template' => 'page/checkout/order.tpl',
             'block' => 'shippingAndPayment',

@@ -206,9 +206,9 @@ class Order extends Order_parent {
 		}
 	}
 
-	private function resetCoupon() {
+	public function resetCoupon() {
 		// have to reset the coupon to empty as they are already generated in the database
-		$userId = $this->getSession()->getUser()->getId();
+		$userId = $this->getOrderUser()->getId();
 		$orderId = $this->getId();
 		$query = "UPDATE oxvouchers 
 			SET
@@ -220,7 +220,7 @@ class Order extends Order_parent {
 			WHERE 
 				oxorderid = '{$orderId}' AND
 				oxuserid = '{$userId}'";
-		WalleeModule::log(Logger::ERROR, "query {$query}.");
+		WalleeModule::log(Logger::DEBUG, "query {$query}.");
 		\OxidEsales\Eshop\Core\DatabaseProvider::getDb()->execute($query);
 	}
 
@@ -363,5 +363,10 @@ class Order extends Order_parent {
 			}
 		}
 		return null;
+	}
+
+	public function getCurrentOrderState() {
+		$currentState = substr($this->getFieldData('OXTRANSSTATUS'), strlen('WALLEE_'));
+		return $currentState;
 	}
 }

@@ -9,7 +9,6 @@
  * @license http://www.apache.org/licenses/LICENSE-2.0  Apache Software License (ASL 2.0)
  */
 
-
 namespace Wle\Wallee\Extend\Application\Controller;
 
 use Wle\Wallee\Core\WalleeModule;
@@ -17,46 +16,66 @@ use Wle\Wallee\Core\WalleeModule;
 /**
  * Class used to include tracking device id on basket.
  *
- * Class BasketController.
  * Extends \OxidEsales\Eshop\Application\Controller\BasketController.
  *
  * @mixin \OxidEsales\Eshop\Application\Controller\BasketController
  */
 class BasketController extends BasketController_parent
 {
+    /**
+     * Keep the original template return value to preserve OXID inheritance chain.
+     *
+     * @return string
+     */
     public function render()
     {
-        parent::render();
+        $template = parent::render();
+        $deviceId = $this->ensureWalleeDeviceCookie();
+        $this->_aViewData['WalleeDeviceScript'] = $this->getWalleeDeviceUrl($deviceId);
 
-        $this->setWalleeDeviceCookie();
-        $this->_aViewData['WalleeDeviceScript'] = $this->getWalleeDeviceUrl();
-
-        return 'wleWalleeCheckoutBasket.tpl';
+        return $template;
     }
 
-    private function getWalleeDeviceUrl()
+    /**
+     * Build device script URL.
+     *
+     * @param string $deviceId
+     * @return string
+     */
+    private function getWalleeDeviceUrl($deviceId)
     {
-        $script = WalleeModule::settings()->getBaseUrl();
-        $script .= '/s/[spaceId]/payment/device.js?sessionIdentifier=[UniqueSessionIdentifier]';
+        $baseUrl = (string) WalleeModule::settings()->getBaseUrl();
+        $spaceId = (string) WalleeModule::settings()->getSpaceId();
+        $script = rtrim($baseUrl, '/')
+            . '/s/[spaceId]/payment/device.js?sessionIdentifier=[UniqueSessionIdentifier]';
 
-        $script = str_replace(array(
-            '[spaceId]',
-            '[UniqueSessionIdentifier]'
-        ), array(
-            WalleeModule::settings()->getSpaceId(),
-            $_COOKIE['Wallee_device_id']
-        ), $script);
+        $script = str_replace(
+            array('[spaceId]', '[UniqueSessionIdentifier]'),
+            array($spaceId, rawurlencode((string) $deviceId)),
+            $script
+        );
 
         return $script;
     }
 
-    private function setWalleeDeviceCookie()
+    /**
+     * Ensure device cookie exists and return its value.
+     *
+     * @return string
+     */
+    private function ensureWalleeDeviceCookie()
     {
-        if (isset($_COOKIE['Wallee_device_id'])) {
-            $value = $_COOKIE['Wallee_device_id'];
-        } else {
-        	$_COOKIE['Wallee_device_id'] = $value = WalleeModule::getUtilsObject()->generateUId();
-        }
-        setcookie('Wallee_device_id', $value, time() + 365 * 24 * 60 * 60, '/');
+        $cookieName = 'Wallee_device_id';
+
+        $value = isset($_COOKIE[$cookieName]) && is_string($_COOKIE[$cookieName]) && $_COOKIE[$cookieName] !== ''
+            ? $_COOKIE[$cookieName]
+            : (string) WalleeModule::getUtilsObject()->generateUId();
+
+        $expire = time() + 365 * 24 * 60 * 60;
+
+        setcookie($cookieName, $value, $expire, '/');
+        $_COOKIE[$cookieName] = $value;
+
+        return $value;
     }
 }

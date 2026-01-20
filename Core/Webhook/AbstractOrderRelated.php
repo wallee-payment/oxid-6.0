@@ -35,31 +35,60 @@ abstract class AbstractOrderRelated extends AbstractWebhook
             throw new \Exception("Received webhook with space id {$request->getSpaceId()} in store which is configured for space id " . WalleeModule::settings()->getSpaceId());
         }
 
-		$entity = $this->loadEntity($request);
-		$orderId = $this->getOrderId($entity);
-        try {
-            $order = $this->loadOrder($orderId);
-        }
-        catch (OrderNotFoundException $e) {
-            if ($entity->getModelName() == 'Transaction' && ($entity->getState() == 'FAILED' || $entity->getState() == 'PENDING')) {
-                // For FAILED state, most likely the order was never created. So we just log and ignore.
-                WalleeModule::log(Logger::INFO, "Ignoring failed webhook for non existing order with id $orderId.");
+        for($i = 0; $i <= self::OPTIMISTIC_RETRIES; $i++) {
+            try {
+                WalleeModule::getUtilsObject()->resetInstanceCache(\OxidEsales\Eshop\Application\Model\Order::class);
+                WalleeModule::getUtilsObject()->resetInstanceCache(\Wle\Wallee\Application\Model\Transaction::class);
+
+                $entity = $this->loadEntity($request);
+                $orderId = $this->getOrderId($entity);
+
+                try {
+                    $order = $this->loadOrder($orderId);
+                } catch (OrderNotFoundException $e) {
+                    if ($entity->getModelName() == 'Transaction' && ($entity->getState() == 'FAILED' || $entity->getState() == 'PENDING')) {
+                        // For FAILED state, most likely the order was never created. So we just log and ignore.
+                        WalleeModule::log(Logger::ERROR, "Ignoring failed webhook for non existing order with id $orderId.");
+                        return;
+                    }
+                    WalleeModule::log(Logger::ERROR, "Could not load order with id $orderId for webhook processing: " . $e->getMessage());
+                    throw $e;
+                }
+                
+                \OxidEsales\Eshop\Core\Registry::getLang()->setBaseLanguage($order->getOrderLanguage());
+
+                if(!$order->getWalleeTransaction() || !$order->getWalleeTransaction()->getId()){
+                    throw new \Exception("Transaction could not be loaded on order.");
+                }
+
+                if($this->processOrderRelatedInner($order, $entity)) {
+                    if(!$order->getWalleeTransaction()->save() || !$order->save()) {
+                        throw new \Exception('Unable to save order');
+                    }
+                }
+                return;
+            } catch (OptimisticLockingException $e) {
+	        	if ($i < self::OPTIMISTIC_RETRIES) {
+                    WalleeModule::log(Logger::DEBUG, "Optimistic locking collision (Attempt $i/" . self::OPTIMISTIC_RETRIES . "). Retrying...");
+                } else {
+                    WalleeModule::log(Logger::ERROR, "Optimistic locking failed after " . self::OPTIMISTIC_RETRIES . " retries. Giving up.");
+                    throw $e;
+                }
+                try {
+                    WalleeModule::rollback();
+                } catch (\Exception $rollbackE) { }
+	        	sleep(self::SECONDS_TO_WAIT);
+            } catch (\Exception $e) {
+                WalleeModule::log(Logger::ERROR, $e->getMessage() . ' - ' . $e->getTraceAsString());
+                try {
+                    WalleeModule::rollback();
+                } catch (\Exception $rollbackE) { }
+                if($e->getCode() !== self::NO_ORDER) {
+	            	throw $e;
+	            }
                 return;
             }
-            WalleeModule::log(Logger::ERROR, "Could not load order with id $orderId for webhook processing: " . $e->getMessage());
-            throw $e;
         }
-		\OxidEsales\Eshop\Core\Registry::getLang()->setBaseLanguage($order->getOrderLanguage());
-
-		if(!$order->getWalleeTransaction() || !$order->getWalleeTransaction()->getId()){
-			throw new \Exception("Transaction could not be loaded on order.");
-		}
-
-		if($this->processOrderRelatedInner($order, $entity)) {
-			if(!$order->getWalleeTransaction()->save() || !$order->save()) {
-				throw new \Exception('Unable to save order');
-			}
-		}
     }
 
 

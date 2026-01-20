@@ -17,6 +17,7 @@ use Wallee\Sdk\Model\TransactionState;
 use Wle\Wallee\Application\Model\Transaction;
 use Wle\Wallee\Core\Service\TransactionService;
 use Wle\Wallee\Core\WalleeModule;
+use Wle\Wallee\Core\Exception\OptimisticLockingException;
 
 /**
  * Class BasketItem.
@@ -32,9 +33,19 @@ class OrderController extends OrderController_parent
         if ($this->getIsOrderStep()) {
             try {
                 $transaction = Transaction::loadPendingFromSession($this->getSession());
-                $transaction->updateFromSession();
+                if ($transaction) {
+                    $transaction->updateFromSession();
+                }
+            } catch (\Wle\Wallee\Core\Exception\OptimisticLockingException $e) {
+                if (isset($transaction) && $transaction) {
+                    try {
+                        $transaction->pull();
+                    } catch (\Exception $pullE) {
+                        WalleeModule::log(Logger::DEBUG, "OrderController: Failed to pull transaction.");
+                    }
+                }
             } catch (\Exception $e) {
-                WalleeModule::log(Logger::ERROR, "Could not update transaction: {$e->getMessage()}.");
+                WalleeModule::log(Logger::ERROR, "Could not update transaction: {$e}.");
             }
         }
     }
