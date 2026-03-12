@@ -18,6 +18,7 @@ use Wle\Wallee\Application\Model\Transaction;
 use Wle\Wallee\Core\Service\TransactionService;
 use Wle\Wallee\Core\WalleeModule;
 use Wle\Wallee\Core\Exception\OptimisticLockingException;
+use Wle\Wallee\Core\Settings\IntegrationMode;
 
 /**
  * Class BasketItem.
@@ -164,5 +165,10 @@ class OrderController extends OrderController_parent
             WalleeModule::log(Logger::ERROR, $e->getMessage(), array($this, $e));
         }
         return '';
+    }
+
+    public function isWalleeIFrameMode()
+    {
+        return WalleeModule::settings()->getIntegrationMode() === IntegrationMode::IFRAME;
     }
 }

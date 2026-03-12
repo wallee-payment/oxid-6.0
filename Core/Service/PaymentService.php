@@ -28,8 +28,6 @@ class PaymentService extends AbstractService {
 	private static $cache = array();
 	private $transactionService;
 	private $configurationService;
-	
-	const INTEGRATION_MODE_IFRAME = 'iframe';
 
 	protected function getTransactionService(){
 		if ($this->transactionService === null) {
@@ -61,7 +59,7 @@ class PaymentService extends AbstractService {
 			return self::$cache[$spaceId . $transactionId];
 		}
 		try {
-			$possibleMethods = $this->getTransactionService()->fetchPaymentMethods($spaceId, $transactionId, self::INTEGRATION_MODE_IFRAME);
+			$possibleMethods = $this->getTransactionService()->fetchPaymentMethods($spaceId, $transactionId, WalleeModule::settings()->getIntegrationMode());
 			foreach ($possibleMethods as $paymentMethod) {
 				self::$cache[$spaceId . $transactionId][] = WalleeModule::createOxidPaymentId($paymentMethod->getId());
 			}

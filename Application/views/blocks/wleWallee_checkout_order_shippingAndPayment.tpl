@@ -1,5 +1,5 @@
 [{$smarty.block.parent}]
-[{if ($oView->isWalleeTransaction()) }]
+[{if ($oView->isWalleeTransaction() && $oView->isWalleeIFrameMode()) }]
 <div class="panel panel-default" id="Wallee-payment-information">
 	<div class="panel-heading">
 		<h3 class="panel-title section">[{oxmultilang ident="PAYMENT_INFORMATION"}]</h3>

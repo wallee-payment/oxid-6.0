@@ -104,7 +104,7 @@ class BasketAdapter implements ILineItemAdapter
             $items[] = $this->extractLineItemFromBasketItem($basketItem);
 
             if (!$basketItem->isSkipDiscount()) {
-                $voucherDiscounts += $this->createVoucherDiscounts($basketItem);
+                $voucherDiscounts = array_merge($voucherDiscounts, $this->createVoucherDiscounts($basketItem));
             }
         }
 

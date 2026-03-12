@@ -617,6 +617,7 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 		if ($affected === 0) {
 			throw new OptimisticLockingException($this->getId(), $this->_sTableName, $updateQuery);
 		}
+		$this->dbVersion = $dbVersion + 1;
 		
 		return true;
 	}

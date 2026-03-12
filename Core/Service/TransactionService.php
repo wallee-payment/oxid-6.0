@@ -22,6 +22,7 @@ use \Wallee\Sdk\Service\TransactionIframeService;
 use Wallee\Sdk\Service\TransactionInvoiceService;
 use Wallee\Sdk\Service\TransactionLineItemVersionService;
 use \Wallee\Sdk\Service\TransactionPaymentPageService;
+use Wle\Wallee\Core\Settings\IntegrationMode;
 
 /**
  * Class TransactionService
@@ -172,6 +173,12 @@ class TransactionService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function getJavascriptUrl($transactionId, $spaceId){
-		return $this->getIframeService()->javascriptUrl($spaceId, $transactionId);
+		$jsUrl = '';
+		switch (WalleeModule::settings()->getIntegrationMode()) {
+			case IntegrationMode::IFRAME:
+				$jsUrl = $this->getIframeService()->javascriptUrl($spaceId, $transactionId);
+				break;
+		}
+		return $jsUrl;
 	}
 }

@@ -29,7 +29,7 @@ $aModule = array(
         'en' => 'WLE Wallee Module'
     ),
     'thumbnail' => 'out/pictures/picture.png',
-    'version' => '1.0.54',
+    'version' => '1.0.55',
     'author' => 'customweb GmbH',
     'url' => 'https://www.customweb.com',
     'email' => 'info@customweb.com',
@@ -86,78 +86,85 @@ $aModule = array(
             'block' => 'admin_login_form',
             'file' => 'Application/views/blocks/wleWallee_include_cron.tpl'
         ),
-    	array(
-    		'template' => 'header.tpl',
-    		'block' => 'admin_header_links',
-    		'file' => 'Application/views/blocks/wleWallee_admin_header_links.tpl'
-    	),
-    	array(
-    		'template' => 'page/account/order.tpl',
-    		'block' => 'account_order_history',
-    		'file' => 'Application/views/blocks/wleWallee_account_order_history.tpl'
-    	),
+        array(
+            'template' => 'header.tpl',
+            'block' => 'admin_header_links',
+            'file' => 'Application/views/blocks/wleWallee_admin_header_links.tpl'
+        ),
+        array(
+            'template' => 'page/account/order.tpl',
+            'block' => 'account_order_history',
+            'file' => 'Application/views/blocks/wleWallee_account_order_history.tpl'
+        ),
     ),
-	'settings' => array(
-		array(
-			'group' => 'wleWalleewalleeSettings',
-			'name' => 'wleWalleeSpaceId',
-			'type' => 'str',
-			'value' => ''
-		),
-		array(
-			'group' => 'wleWalleewalleeSettings',
-			'name' => 'wleWalleeUserId',
-			'type' => 'str',
-			'value' => ''
-		),
-		array(
-			'group' => 'wleWalleewalleeSettings',
-			'name' => 'wleWalleeAppKey',
-			'type' => 'password',
-			'value' => ''
-		),
-		array(
-			'group' => 'wleWalleeShopSettings',
-			'name' => 'wleWalleeEmailConfirm',
-			'type' => 'bool',
-			'value' => true
-		),
-		array(
-			'group' => 'wleWalleeShopSettings',
-			'name' => 'wleWalleeEnforceConsistency',
-			'type' => 'bool',
-			'value' => true
-		),
-		array(
-			'group' => 'wleWalleeShopSettings',
-			'name' => 'wleWalleeInvoiceDoc',
-			'type' => 'bool',
-			'value' => true
-		),
-		array(
-			'group' => 'wleWalleeShopSettings',
-			'name' => 'wleWalleePackingDoc',
-			'type' => 'bool',
-			'value' => true
-		),
-		array(
-			'group' => 'wleWalleeShopSettings',
-			'name' => 'wleWalleeLogLevel',
-			'type' => 'select',
-			'value' => 'Error',
-			'constraints' => 'Error|Info|Debug'
-		),
-		array(
-			'group' => 'wleWalleeSpaceViewSettings',
-			'name' => 'wleWalleeSpaceViewId',
-			'type' => 'str',
-			'value' => ''
-		),
+    'settings' => array(
+        array(
+            'group' => 'wleWalleewalleeSettings',
+            'name' => 'wleWalleeSpaceId',
+            'type' => 'str',
+            'value' => ''
+        ),
+        array(
+            'group' => 'wleWalleewalleeSettings',
+            'name' => 'wleWalleeUserId',
+            'type' => 'str',
+            'value' => ''
+        ),
+        array(
+            'group' => 'wleWalleewalleeSettings',
+            'name' => 'wleWalleeAppKey',
+            'type' => 'password',
+            'value' => ''
+        ),
         array(
             'group' => 'wleWalleeShopSettings',
-			'name' => 'wleWalleeMigration',
-			'type' => 'num',
-			'value' => 0,
+            'name' => 'wleWalleeEmailConfirm',
+            'type' => 'bool',
+            'value' => true
+        ),
+        array(
+            'group' => 'wleWalleeShopSettings',
+            'name' => 'wleWalleeEnforceConsistency',
+            'type' => 'bool',
+            'value' => true
+        ),
+        array(
+            'group' => 'wleWalleeShopSettings',
+            'name' => 'wleWalleeInvoiceDoc',
+            'type' => 'bool',
+            'value' => true
+        ),
+        array(
+            'group' => 'wleWalleeShopSettings',
+            'name' => 'wleWalleePackingDoc',
+            'type' => 'bool',
+            'value' => true
+        ),
+        array(
+            'group' => 'wleWalleeShopSettings',
+            'name' => 'wleWalleeLogLevel',
+            'type' => 'select',
+            'value' => 'Error',
+            'constraints' => 'Error|Info|Debug'
+        ),
+        array(
+            'group' => 'wleWalleeSpaceViewSettings',
+            'name' => 'wleWalleeSpaceViewId',
+            'type' => 'str',
+            'value' => ''
+        ),
+        array(
+            'group' => 'wleWalleeShopSettings',
+            'name' => 'wleWalleeMigration',
+            'type' => 'num',
+            'value' => 0,
+        ),
+        array(
+            'group' => 'wleWalleeShopSettings',
+            'name' => 'wleWalleeIntegrationMode',
+            'type' => 'select',
+            'value' => 'iframe',
+            'constraints' => 'iframe|payment_page'
         )
     ),
     'events' => array(
