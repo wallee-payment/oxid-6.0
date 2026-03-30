@@ -49,6 +49,7 @@ class Order extends Order_parent {
 
 		// copied from recalculateOrder, minus call of finalizeOrder, and adding new articles.
 		$oBasket = $this->_getOrderBasket();
+
 		/* @noinspection PhpParamsInspection */
 		$orderArticles = $this->getOrderArticles(true);
 		// Here we populate the basket with Articles, not OrderArticles as the email templates expect the Article
@@ -338,7 +339,26 @@ class Order extends Order_parent {
 	}
 
 	protected function _Order_sendOrderByEmail_parent($oUser = null, $oBasket = null, $oPayment = null){
-		return parent::_sendOrderByEmail($oUser, $oBasket, $oPayment);
+		$conf = \OxidEsales\Eshop\Core\Registry::getConfig();
+		$oldCurrency = $conf->getShopCurrency();
+		$orderCurrencyObj = $this->getOrderCurrency();
+		
+		// Temporarily set the active shop currency to the order's currency.
+		// Oxid's email templates use oxEmail::getCurrency(), which returns the active shop currency 
+		// instead of the basket/order currency. When an order is confirmed via a webhook without a user session, 
+		// the shop defaults to the default currenty, which can be different from the order currency.
+		if (isset($orderCurrencyObj->id)) {
+			$conf->setActShopCurrency($orderCurrencyObj->id);
+		}
+
+		$result = parent::_sendOrderByEmail($oUser, $oBasket, $oPayment);
+
+		// Restore the original active currency
+		if (isset($orderCurrencyObj->id)) {
+			$conf->setActShopCurrency($oldCurrency);
+		}
+
+		return $result;
 	}
 
 	public function isWleOrder($basket = null){

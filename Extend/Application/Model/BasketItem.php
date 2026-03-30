@@ -21,7 +21,13 @@ class BasketItem extends BasketItem_parent {
 	private static $blWleDisableCheckProduct = false;
 
 	public function getArticle($blCheckProduct = false, $sProductId = null, $blDisableLazyLoading = false){
-		return $this->_BasketItem_getArticle_parent(self::$blWleDisableCheckProduct ? false : $blCheckProduct, $sProductId, $blDisableLazyLoading);
+		try {
+			return $this->_BasketItem_getArticle_parent(self::$blWleDisableCheckProduct ? false : $blCheckProduct, $sProductId, $blDisableLazyLoading);
+		} catch (\Exception $e) {
+			// We re-throw only the message to ensure that the full exception (including trace and JSON info)
+			// is not leaked to the frontend display.
+			throw new \Exception($e->getMessage());
+		}
 	}
 
 	protected function _BasketItem_getArticle_parent($blCheckProduct = false, $sProductId = null, $blDisableLazyLoading = false){

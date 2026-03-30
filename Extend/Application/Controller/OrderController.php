@@ -142,7 +142,7 @@ class OrderController extends OrderController_parent
                 }
             }
         } catch (\Exception $e) {
-        	WalleeModule::getUtilsView()->addErrorToDisplay($e);
+        	WalleeModule::getUtilsView()->addErrorToDisplay($e->getMessage());
         }
     }
     
