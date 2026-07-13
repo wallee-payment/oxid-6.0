@@ -81,7 +81,5 @@ CREATE TABLE IF NOT EXISTS `wleWallee_alert` (
   PRIMARY KEY (`WLEKEY`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
-INSERT INTO `wleWallee_alert` (`WLEKEY`, `WLEFUNC`, `WLETARGET`, `WLECOUNT`) VALUES ('manual_task', 'manualtask', '_parent', 0);
-
-SET SQL_MODE='ALLOW_INVALID_DATES';
-CREATE INDEX idx_wle_oxorder_oxtransstatus ON `oxorder` (`OXTRANSSTATUS`);
+INSERT INTO `wleWallee_alert` (`WLEKEY`, `WLEFUNC`, `WLETARGET`, `WLECOUNT`) VALUES ('manual_task', 'manualtask', '_parent', 0)
+ON DUPLICATE KEY UPDATE `WLEKEY` = `WLEKEY`;

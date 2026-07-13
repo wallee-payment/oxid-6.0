@@ -56,14 +56,18 @@ class ModuleConfiguration extends ModuleConfiguration_parent
 
                 $oldUrl = WalleeModule::settings()->getWebhookUrl();
                 $newUrl = WalleeModule::instance()->createWebhookUrl();
+                $webhookService = new WebhookService();
+                if ($oldUrl !== $newUrl && !empty($oldUrl)) {
+                    $webhookService->uninstall(WalleeModule::settings()->getSpaceId(), $oldUrl);
+                }
+                // install() is idempotent, so it is always called to ensure the webhook url
+                // and listeners exist in the currently configured space (e.g. after a space change).
+                $webhookService->install(WalleeModule::settings()->getSpaceId(), $newUrl);
                 if ($oldUrl !== $newUrl) {
-                    $webhookService = new WebhookService();
-                    $webhookService->uninstall(WalleeModule::settings()->getSpaceId(), $oldUrl);;
-                    $webhookService->install(WalleeModule::settings()->getSpaceId(), $newUrl);
                     WalleeModule::settings()->setWebhookUrl($newUrl);
                     WalleeModule::addMessage(WalleeModule::instance()->translate("Webhook URL updated successfully."));
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 WalleeModule::log(Logger::ERROR, "Unable to synchronize settings: {$e->getMessage()}.");
                 WalleeModule::getUtilsView()->addErrorToDisplay($e->getMessage());
             }

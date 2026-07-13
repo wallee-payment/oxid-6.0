@@ -78,20 +78,20 @@ class PaymentService extends AbstractService {
 	 */
 	public function synchronize(){
 		$paymentMethods = $this->getConfigurationService()->search(WalleeModule::settings()->getSpaceId(), $this->getQueryFilter('state', \Wallee\Sdk\Model\CreationEntityState::ACTIVE));
-		
+
 		$paymentList = oxNew(\OxidEsales\Eshop\Application\Model\PaymentList::class);
 		/* @var $paymentList \Wle\Wallee\Extend\Application\Model\PaymentList */
 		$paymentList->loadWalleePayments();
-		
+
+		$synchronized = array();
 		foreach ($paymentMethods as $paymentMethod) {
-			if (!$this->updatePaymentMethod($paymentMethod)) {
-				$existing_found[] = self::getOxPaymentId($paymentMethod->getId());
-			}
+			$this->updatePaymentMethod($paymentMethod);
+			$synchronized[] = self::getOxPaymentId($paymentMethod->getId());
 		}
-		
+
 		foreach ($paymentList as $payment) {
 			/* @var $payment \OxidEsales\Eshop\Application\Model\Payment */
-			if (!in_array($payment->getId(), $existing_found)) {
+			if (!in_array($payment->getId(), $synchronized)) {
 				self::disablePaymentMethod($payment->getId());
 			}
 		}
@@ -146,7 +146,6 @@ class PaymentService extends AbstractService {
 		/* @var $payment \OxidEsales\Eshop\Application\Model\Payment */
 		if (!$payment->load(self::getOxPaymentId($paymentMethod->getId()))) {
 			$payment->setId(self::getOxPaymentId($paymentMethod->getId()));
-			$payment->oxpayments__oxactive = new \OxidEsales\Eshop\Core\Field(1);
 			$payment->oxpayments__oxaddsum = new \OxidEsales\Eshop\Core\Field(0);
 			$payment->oxpayments__oxaddsumtype = new \OxidEsales\Eshop\Core\Field('abs');
 			$payment->oxpayments__oxfromboni = new \OxidEsales\Eshop\Core\Field(0);
@@ -154,7 +153,9 @@ class PaymentService extends AbstractService {
 			$payment->oxpayments__oxtoamount = new \OxidEsales\Eshop\Core\Field(100000);
 			$newMethod = true;
 		}
-		
+
+		// method is active in the space, so it must be selectable in the shop again (e.g. after switching spaces back and forth)
+		$payment->oxpayments__oxactive = new \OxidEsales\Eshop\Core\Field(1);
 		$payment->oxpayments__oxsort = new \OxidEsales\Eshop\Core\Field($paymentMethod->getSortOrder());
 		
 		$language = \OxidEsales\Eshop\Core\Registry::getLang();
@@ -162,7 +163,9 @@ class PaymentService extends AbstractService {
 		
 		$titles = $paymentMethod->getResolvedTitle();
 		$descriptions = $paymentMethod->getResolvedDescription();
-		
+
+		$payment->save();
+
 		/**
 		 * @noinspection PhpParamsInspection
 		 */
@@ -175,7 +178,34 @@ class PaymentService extends AbstractService {
 				$payment->save();
 			}
 		}
-		
+
+		if ($newMethod) {
+			$this->assignPaymentToDeliverySets($payment->getId());
+		}
+
 		return $newMethod;
+	}
+
+	/**
+	 * Assigns a payment method to all delivery sets, so it is selectable in the checkout without manual configuration.
+	 *
+	 * @param string $paymentId
+	 * @throws \Exception
+	 */
+	private function assignPaymentToDeliverySets($paymentId){
+		$db = \OxidEsales\Eshop\Core\DatabaseProvider::getDb();
+		$deliverySetIds = $db->getCol('SELECT `OXID` FROM `oxdeliveryset`');
+		foreach ($deliverySetIds as $deliverySetId) {
+			$exists = $db->getOne('SELECT `OXID` FROM `oxobject2payment` WHERE `OXPAYMENTID` = ? AND `OXOBJECTID` = ? AND `OXTYPE` = ?',
+				array($paymentId, $deliverySetId, 'oxdelset'));
+			if (!$exists) {
+				$assignment = oxNew(\OxidEsales\Eshop\Core\Model\BaseModel::class);
+				$assignment->init('oxobject2payment');
+				$assignment->oxobject2payment__oxpaymentid = new \OxidEsales\Eshop\Core\Field($paymentId);
+				$assignment->oxobject2payment__oxobjectid = new \OxidEsales\Eshop\Core\Field($deliverySetId);
+				$assignment->oxobject2payment__oxtype = new \OxidEsales\Eshop\Core\Field('oxdelset');
+				$assignment->save();
+			}
+		}
 	}
 }

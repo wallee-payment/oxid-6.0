@@ -33,6 +33,7 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
     const SHOP_SYSTEM_AND_VERSION = 'x-meta-shop-system-and-version';
     const FALLBACK_LANGUAGE = 'en-US';
     const PAYMENT_PREFIX = 'oxidwle';
+    const ORDER_TRANS_STATUS_INDEX = 'idx_wle_oxorder_oxtransstatus';
     /**
      * @var Logger
      */
@@ -243,6 +244,7 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
         $bool = 0;
         $bool += self::_dbEvent('install.sql', 'Error activating module: ');
         $bool += self::migrate();
+        self::_createOrderIndex();
         return $bool > 0;
     }
 
@@ -262,14 +264,62 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
         $currentVersion = (int)$settings->getMigration();
         $unprocessed = array_splice($files, $currentVersion);
         foreach ($unprocessed as $file) {
-            $bool += self::_dbEvent(basename($file), "Error migrating $file.");
-            if ($bool === false) {
-                break;
+            // the migration counter is reset whenever the module configuration is re-applied
+            // (e.g. oe:module:apply-configuration), so check the actual schema state to avoid
+            // re-running migrations that were already applied.
+            if (!self::_isMigrationApplied(basename($file))) {
+                $bool += self::_dbEvent(basename($file), "Error migrating $file.");
             }
             $currentVersion++;
         }
         $settings->setMigration($currentVersion);
         return $bool;
+    }
+
+    /**
+     * Checks whether a migration script has already been applied by inspecting the schema.
+     *
+     * @param string $sSqlFile
+     * @return bool
+     */
+    protected static function _isMigrationApplied($sSqlFile)
+    {
+        /** @var \OxidEsales\Eshop\Core\DbMetaDataHandler $oDbHandler */
+        $oDbHandler = oxNew(\OxidEsales\Eshop\Core\DbMetaDataHandler::class);
+        switch ($sSqlFile) {
+            case '2_fix_token_migration.sql':
+                if (!$oDbHandler->fieldExists('OXID', 'wleWallee_token')) {
+                    return false;
+                }
+                self::_restoreTokenPrimaryKey($oDbHandler);
+                return true;
+            case '3_fix_emails_optimistic_locking_migration.sql':
+                return $oDbHandler->fieldExists('WLEEMAILSENT', 'wleWallee_transaction');
+        }
+        return false;
+    }
+
+    /**
+     * Restores the token table primary key if a previously interrupted re-run of
+     * 2_fix_token_migration.sql dropped it without re-adding it.
+     *
+     * @param \OxidEsales\Eshop\Core\DbMetaDataHandler $oDbHandler
+     */
+    protected static function _restoreTokenPrimaryKey($oDbHandler)
+    {
+        try {
+            foreach ($oDbHandler->getIndices('wleWallee_token') as $aIndex) {
+                if ($aIndex['Key_name'] === 'PRIMARY') {
+                    return;
+                }
+            }
+            $oDbHandler->executeSql(array(
+                "UPDATE `wleWallee_token` SET `OXID` = MD5(CONCAT(`WLETOKENID`, `WLESPACEID`, RAND())) WHERE `OXID` = ''",
+                'ALTER TABLE `wleWallee_token` ADD PRIMARY KEY (`OXID`)'
+            ));
+        } catch (\Exception $ex) {
+            self::log(Logger::ERROR, 'Error restoring token table primary key: ' . $ex->getMessage());
+        }
     }
 
     /**
@@ -279,7 +329,49 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
      */
     public static function onDeactivate()
     {
+        self::_dropOrderIndex();
         return self::_dbEvent('uninstall.sql', 'Error deactivating module: ');
+    }
+
+    protected static function _hasOrderIndex()
+    {
+        /** @var \OxidEsales\Eshop\Core\DbMetaDataHandler $oDbHandler */
+        $oDbHandler = oxNew(\OxidEsales\Eshop\Core\DbMetaDataHandler::class);
+        foreach ($oDbHandler->getIndices('oxorder') as $aIndex) {
+            if ($aIndex['Key_name'] === self::ORDER_TRANS_STATUS_INDEX) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected static function _createOrderIndex()
+    {
+        try {
+            if (!self::_hasOrderIndex()) {
+                $oDbHandler = oxNew(\OxidEsales\Eshop\Core\DbMetaDataHandler::class);
+                $oDbHandler->executeSql(array(
+                    "SET SQL_MODE='ALLOW_INVALID_DATES'",
+                    'CREATE INDEX ' . self::ORDER_TRANS_STATUS_INDEX . ' ON `oxorder` (`OXTRANSSTATUS`)'
+                ));
+            }
+        } catch (\Exception $ex) {
+            self::log(Logger::ERROR, 'Error creating oxorder index: ' . $ex->getMessage());
+        }
+    }
+
+    protected static function _dropOrderIndex()
+    {
+        try {
+            if (self::_hasOrderIndex()) {
+                $oDbHandler = oxNew(\OxidEsales\Eshop\Core\DbMetaDataHandler::class);
+                $oDbHandler->executeSql(array(
+                    'DROP INDEX ' . self::ORDER_TRANS_STATUS_INDEX . ' ON `oxorder`'
+                ));
+            }
+        } catch (\Exception $ex) {
+            self::log(Logger::ERROR, 'Error dropping oxorder index: ' . $ex->getMessage());
+        }
     }
 
     public static function log($level, $message, $context = array())
@@ -463,17 +555,15 @@ class WalleeModule extends \OxidEsales\Eshop\Core\Module\Module
      */
     protected static function _dbEvent($sSqlFile, $sFailureError = 'Operation failed: ')
     {
-    	self::log(Logger::ERROR, __METHOD__);
         /** @var \OxidEsales\Eshop\Core\DbMetaDataHandler $oDbHandler */
         $oDbHandler = oxNew(\OxidEsales\Eshop\Core\DbMetaDataHandler::class);
 
         try {
             $sSql = file_get_contents(dirname(__FILE__) . '/../docs/' . (string)$sSqlFile);
             $aSql = (array)explode(';', $sSql);
-            self::log(Logger::ERROR, print_r($aSql, true));
             $oDbHandler->executeSql($aSql);
         } catch (\Exception $ex) {
-            self::log(Logger::ERROR, $ex->getMessage());
+            self::log(Logger::ERROR, $sFailureError . $ex->getMessage());
             error_log($sFailureError . $ex->getMessage());
             return false;
         }
