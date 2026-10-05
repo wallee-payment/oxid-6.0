@@ -59,7 +59,11 @@ class PaymentService extends AbstractService {
 			return self::$cache[$spaceId . $transactionId];
 		}
 		try {
-			$possibleMethods = $this->getTransactionService()->fetchPaymentMethods($spaceId, $transactionId, WalleeModule::settings()->getIntegrationMode());
+			$service = $this->getTransactionService();
+			$integrationMode = WalleeModule::settings()->getIntegrationMode();
+			$possibleMethods = ApiCallTracker::track('transaction.fetchPaymentMethods', function () use ($service, $spaceId, $transactionId, $integrationMode){
+				return $service->fetchPaymentMethods($spaceId, $transactionId, $integrationMode);
+			});
 			foreach ($possibleMethods as $paymentMethod) {
 				self::$cache[$spaceId . $transactionId][] = WalleeModule::createOxidPaymentId($paymentMethod->getId());
 			}
@@ -77,7 +81,12 @@ class PaymentService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function synchronize(){
-		$paymentMethods = $this->getConfigurationService()->search(WalleeModule::settings()->getSpaceId(), $this->getQueryFilter('state', \Wallee\Sdk\Model\CreationEntityState::ACTIVE));
+		$service = $this->getConfigurationService();
+		$spaceId = WalleeModule::settings()->getSpaceId();
+		$query = $this->getQueryFilter('state', \Wallee\Sdk\Model\CreationEntityState::ACTIVE);
+		$paymentMethods = ApiCallTracker::track('paymentMethodConfiguration.search', function () use ($service, $spaceId, $query){
+			return $service->search($spaceId, $query);
+		});
 
 		$paymentList = oxNew(\OxidEsales\Eshop\Application\Model\PaymentList::class);
 		/* @var $paymentList \Wle\Wallee\Extend\Application\Model\PaymentList */

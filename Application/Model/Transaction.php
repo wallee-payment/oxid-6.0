@@ -31,6 +31,7 @@ use Wle\Wallee\Core\Service\TransactionService;
 use Wle\Wallee\Core\WalleeModule;
 use Wallee\Sdk\Model\Transaction as sdkTransaction;
 use Wallee\Sdk\ApiException;
+use Wallee\Sdk\VersioningException;
 use Wle\Wallee\Core\Exception\OptimisticLockingException;
 
 /**
@@ -46,6 +47,37 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 	 * @var sdkTransaction
 	 */
 	private $sdkTransaction;
+	/**
+	 * Whether the sdk transaction above was read from Wallee during this request,
+	 * so it does not have to be pulled again before an update.
+	 *
+	 * @var bool
+	 */
+	private $sdkTransactionFresh = false;
+	/**
+	 * Fingerprint of the session data last pushed to Wallee during this request.
+	 *
+	 * @var string|null
+	 */
+	private $pushedFingerprint = null;
+	/**
+	 * Fingerprint of the row as it is currently stored in the database, null while it was never written.
+	 *
+	 * @var string|null
+	 */
+	private $persistedFingerprint = null;
+	/**
+	 * Pending transaction of the current request, so it is only fetched from Wallee once.
+	 *
+	 * @var Transaction|null
+	 */
+	private static $sessionTransaction = null;
+	/**
+	 * Session state the cached transaction above belongs to.
+	 *
+	 * @var string|null
+	 */
+	private static $sessionTransactionKey = null;
 	protected $_aSkipSaveFields = [
 		'oxtimestamp',
 		'wleversion',
@@ -155,10 +187,13 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 
 	public function loadByOrder($orderId){
 		$select = $this->buildSelectString(array(
-			'oxorderid' => $orderId 
+			'oxorderid' => $orderId
 		));
 		$this->_isLoaded = $this->assignRecord($select);
 		$this->dbVersion = $this->getFieldData('wleversion');
+		if ($this->_isLoaded) {
+			$this->persistedFingerprint = $this->getPersistedFingerprint();
+		}
 		return $this->_isLoaded;
 	}
 
@@ -170,6 +205,12 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 	 * @throws \Exception
 	 */
 	public static function loadPendingFromSession(\OxidEsales\Eshop\Core\Session $session){
+		$cached = self::getCachedSessionTransaction($session);
+		if ($cached !== null) {
+			WalleeModule::log(Logger::DEBUG, "Reusing pending transaction {$cached->getTransactionId()} of this request.");
+			return $cached;
+		}
+
 		$transaction = self::loadFromSession($session, TransactionState::PENDING);
 		if (!$transaction) {
 			$transaction = oxNew(\Wle\Wallee\Application\Model\Transaction::class);
@@ -178,7 +219,61 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 		} else {
 			$transaction->updateFromSession();
 		}
+		self::cacheSessionTransaction($session, $transaction);
 		return $transaction;
+	}
+
+	/**
+	 * Drops the cached pending transaction of the current request.
+	 */
+	private static function clearSessionTransactionCache(){
+		self::$sessionTransaction = null;
+		self::$sessionTransactionKey = null;
+	}
+
+	/**
+	 * Returns the cached transaction if it still matches the session and is still pending.
+	 *
+	 * @param \OxidEsales\Eshop\Core\Session $session
+	 * @return Transaction|null
+	 */
+	private static function getCachedSessionTransaction(\OxidEsales\Eshop\Core\Session $session){
+		if (self::$sessionTransaction === null) {
+			return null;
+		}
+		$key = self::getSessionCacheKey($session);
+		// The transaction leaves the PENDING state once it is confirmed, from then on a new one has to be created.
+		if ($key === null || $key !== self::$sessionTransactionKey ||
+				self::$sessionTransaction->getState() !== TransactionState::PENDING) {
+			self::clearSessionTransactionCache();
+			return null;
+		}
+		return self::$sessionTransaction;
+	}
+
+	private static function cacheSessionTransaction(\OxidEsales\Eshop\Core\Session $session, Transaction $transaction){
+		self::$sessionTransactionKey = self::getSessionCacheKey($session);
+		self::$sessionTransaction = self::$sessionTransactionKey === null ? null : $transaction;
+	}
+
+	/**
+	 * Identifies the transaction the session currently points to.
+	 *
+	 * @param \OxidEsales\Eshop\Core\Session $session
+	 * @return string|null
+	 */
+	private static function getSessionCacheKey(\OxidEsales\Eshop\Core\Session $session){
+		$transactionId = $session->getVariable('Wallee_transaction_id');
+		$spaceId = $session->getVariable('Wallee_space_id');
+		$userId = $session->getVariable('Wallee_user_id');
+		if (!$transactionId || !$spaceId || !$userId) {
+			return null;
+		}
+		return implode('|', array(
+			$transactionId,
+			$spaceId,
+			$userId
+		));
 	}
 
 	/**
@@ -218,8 +313,11 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 		$transactionId = $session->getVariable('Wallee_transaction_id');
 		$spaceId = $session->getVariable('Wallee_space_id');
 		$userId = $session->getVariable('Wallee_user_id');
-		
-		if ($transactionId && $spaceId && $userId == $session->getUser()->getId() && $spaceId == WalleeModule::settings()->getSpaceId()) {
+		// The session may still carry the transaction while the user is already gone, for example
+		// when the customer logs out on the checkout page.
+		$user = $session->getUser();
+
+		if ($user && $transactionId && $spaceId && $userId == $user->getId() && $spaceId == WalleeModule::settings()->getSpaceId()) {
 			if (!$transaction->loadByTransactionAndSpace($transactionId, $spaceId)) {
 				$transaction->setSpaceId($spaceId);
 				$transaction->setTransactionId($transactionId);
@@ -241,6 +339,9 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 				));
 		$this->_isLoaded = $this->assignRecord($select);
 		$this->dbVersion = $this->getFieldData('wleversion');
+		if ($this->_isLoaded) {
+			$this->persistedFingerprint = $this->getPersistedFingerprint();
+		}
 		return $this->_isLoaded;
 	}
 
@@ -490,16 +591,52 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 	 */
 	public function updateFromSession($confirm = false){
 		WalleeModule::log(Logger::DEBUG, "Start update from session.");
-		$this->pull(); // ensure updateable
+		// A confirm always pulls: it is the last call of the checkout and must run on the version the
+		// portal currently holds, the iframe validation may have moved it on since the page was built.
+		if ($confirm || !$this->sdkTransactionFresh) {
+			$this->pull(); // ensure updateable
+		}
+		$this->assertPending();
+
+		$adapter = new SessionAdapter($this->getSession());
+		$updateData = $adapter->getUpdateData($this);
+		$fingerprint = $adapter->getUpdateFingerprint($updateData);
+		// A confirm must always be sent, it is not a plain data push.
+		if (!$confirm && $fingerprint === $this->pushedFingerprint) {
+			WalleeModule::log(Logger::DEBUG, "Session data unchanged since the last push, skipping transaction update.");
+			return $this->getSdkTransaction();
+		}
+
+		try {
+			$transaction = TransactionService::instance()->update($updateData, $confirm);
+		}
+		catch (\Exception $e) {
+			// An outdated local version is the only failure we may safely repeat. The call was rejected
+			// with a conflict, so nothing was applied yet, and the pull below makes sure the transaction
+			// is still pending before it is sent again.
+			if (!($e instanceof VersioningException)) {
+				throw $e;
+			}
+			WalleeModule::log(Logger::DEBUG, "Outdated transaction version, refreshing and retrying update once.");
+			$this->pull();
+			$this->assertPending();
+			// rebuild, the pull assigned a new version
+			$transaction = TransactionService::instance()->update($adapter->getUpdateData($this), $confirm);
+		}
+		$this->apply($transaction);
+		$this->pushedFingerprint = $fingerprint;
+		WalleeModule::log(Logger::DEBUG, "Complete update from session.");
+		return $transaction;
+	}
+
+	/**
+	 *
+	 * @throws \Exception
+	 */
+	private function assertPending(){
 		if ($this->getState() !== TransactionState::PENDING) {
 			throw new \Exception('Transaction not in state PENDING may no longer be updated:' . $this->getTransactionId());
 		}
-		
-		$adapter = new SessionAdapter($this->getSession());
-		$transaction = TransactionService::instance()->update($adapter->getUpdateData($this), $confirm);
-		$this->apply($transaction);
-		WalleeModule::log(Logger::DEBUG, "Complete update from session.");
-		return $transaction;
 	}
 	
 	public function getPaymentPageUrl() {
@@ -552,7 +689,9 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 		// only save to db with order, otherwise save relevant ids to session.
 		if ($this->getOrderId()) {
 			WalleeModule::log(Logger::DEBUG, "Saving to database.");
-			return parent::save();
+			$result = parent::save();
+			$this->persistedFingerprint = $this->getPersistedFingerprint();
+			return $result;
 		}
 		else if ($this->getSession()->getUser()) {
 			WalleeModule::log(Logger::DEBUG, "Saving to session.");
@@ -569,13 +708,87 @@ class Transaction extends \OxidEsales\Eshop\Core\Model\BaseModel {
 	 * @throws \Exception
 	 */
 	protected function apply(sdkTransaction $transaction){
+		$this->sdkTransactionFresh = true;
 		$this->setSdkTransaction($transaction);
+		$this->applySdkFields($transaction);
+
+		// A read which brought back the same data must not write the row again, every write increments
+		// the optimistic locking version and makes concurrent webhooks fail.
+		if ($this->persistedFingerprint !== null && $this->persistedFingerprint === $this->getPersistedFingerprint()) {
+			WalleeModule::log(Logger::DEBUG, "Transaction row is unchanged, skipping save.");
+			return;
+		}
+		try {
+			$this->save();
+		}
+		catch (OptimisticLockingException $e) {
+			// Another process, usually a webhook for the very state we just read, wrote the row while this
+			// request was working with it. Reloading keeps what it wrote and lets this request finish
+			// instead of aborting the whole checkout step with a locking error.
+			WalleeModule::log(Logger::DEBUG,
+					"Transaction row was changed concurrently, reloading and saving once more.");
+			$this->reapplyAfterConflict($transaction);
+		}
+	}
+
+	/**
+	 * Copies the state of the Wallee transaction onto this model.
+	 *
+	 * @param sdkTransaction $transaction
+	 */
+	private function applySdkFields(sdkTransaction $transaction){
 		$this->setTransactionId($transaction->getId());
 		$this->setVersion($transaction->getVersion());
 		$this->setState($transaction->getState());
 		$this->setSpaceId($transaction->getLinkedSpaceId());
 		$this->setSpaceViewId($transaction->getSpaceViewId());
+	}
+
+	/**
+	 * Re-reads the row after a locking conflict and writes it again, with the fields this request
+	 * changed on top of the ones the concurrent writer left behind.
+	 *
+	 * @param sdkTransaction $transaction
+	 * @throws \Exception
+	 */
+	private function reapplyAfterConflict(sdkTransaction $transaction){
+		$ownFields = array(
+			'oxorderid' => $this->getOrderId(),
+			'wletempbasket' => $this->getFieldData('wletempbasket'),
+			'wlefailurereason' => $this->getFieldData('wlefailurereason')
+		);
+		if (!$this->loadByTransactionAndSpace($transaction->getId(), $transaction->getLinkedSpaceId())) {
+			throw new \Exception("Unable to reload transaction {$transaction->getId()} after a locking conflict.");
+		}
+		foreach ($ownFields as $field => $value) {
+			if ($value) {
+				$this->_setFieldData($field, $value);
+			}
+		}
+		$this->applySdkFields($transaction);
+		if ($this->persistedFingerprint === $this->getPersistedFingerprint()) {
+			WalleeModule::log(Logger::DEBUG, "Transaction row already holds this state, skipping save.");
+			return;
+		}
 		$this->save();
+	}
+
+	/**
+	 * Fingerprint over every field this model writes to the database.
+	 *
+	 * @return string
+	 */
+	private function getPersistedFingerprint(){
+		return md5(implode('|', array(
+			(string) $this->getTransactionId(),
+			(string) $this->getState(),
+			(string) $this->getSpaceId(),
+			(string) $this->getSpaceViewId(),
+			(string) $this->getOrderId(),
+			(string) $this->getFieldData('wletempbasket'),
+			(string) $this->getFieldData('wlefailurereason'),
+			(string) $this->getEmailSent()
+		)));
 	}
 
 	/**

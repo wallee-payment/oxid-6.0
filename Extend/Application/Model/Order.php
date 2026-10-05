@@ -275,6 +275,16 @@ class Order extends Order_parent {
 
 		$result = $this->_Order_finalizeOrder_parent($oBasket, $oUser, $blRecalculatingOrder);
 
+		// The reload blocker of the shop would answer a second attempt with the thank you page, although
+		// the payment of the blocking order never happened. Drop the blocker so the next attempt builds a
+		// new order, and send the customer back to the payment step.
+		if ($result === self::ORDER_STATE_ORDEREXISTS && !$blRecalculatingOrder && !$this->confirming) {
+			WalleeModule::log(Logger::WARNING,
+					"Order already exists while the payment was not completed, returning to the payment step.");
+			$this->getSession()->deleteVariable('sess_challenge');
+			return self::ORDER_STATE_PAYMENTERROR;
+		}
+
 		if ($result == self::ORDER_STATE_OK && !$blRecalculatingOrder) {
 			$result = 'WALLEE_' . TransactionState::PENDING;
 			$this->_setOrderStatus($result);
@@ -307,19 +317,11 @@ class Order extends Order_parent {
 		$isSettingEnabled = WalleeModule::settings()->isEmailConfirmationActive();
 
 		if ($isWleOrder && $isSettingEnabled) {
-			try {
-				$transaction = Transaction::loadPendingFromSession($this->getSession());
-				if ($transaction === null) {
-					return self::ORDER_STATE_OK;
-				}
-
-				$sdkTransaction = $transaction->getSdkTransaction();
-				$state = $sdkTransaction->getState();
-				if (!WalleeModule::isAuthorizedState($state)) {
-					return self::ORDER_STATE_OK;
-				}
-			} catch (\Exception $e) {
-				// OK, It's an edge case. Let's send email for webhook, we validated it earlier.
+			// The confirmation email must only go out once the payment was authorized. The webhook sets the
+			// order state right before it calls WalleeAuthorize(), so reading the order state
+			// answers this without loading the transaction from Wallee.
+			if (!WalleeModule::isAuthorizedState($this->getFieldData('oxtransstatus'))) {
+				return self::ORDER_STATE_OK;
 			}
 		}
 

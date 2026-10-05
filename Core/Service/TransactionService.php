@@ -93,7 +93,10 @@ class TransactionService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function read($transactionId, $spaceId){
-		return $this->getService()->read($spaceId, $transactionId);
+		$service = $this->getService();
+		return ApiCallTracker::track('transaction.read', function () use ($service, $spaceId, $transactionId){
+			return $service->read($spaceId, $transactionId);
+		});
 	}
 
 	/**
@@ -103,7 +106,11 @@ class TransactionService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function create(TransactionCreate $transaction){
-		return $this->getService()->create(WalleeModule::settings()->getSpaceId(), $transaction);
+		$service = $this->getService();
+		$spaceId = WalleeModule::settings()->getSpaceId();
+		return ApiCallTracker::track('transaction.create', function () use ($service, $spaceId, $transaction){
+			return $service->create($spaceId, $transaction);
+		});
 	}
 
 	/**
@@ -118,7 +125,10 @@ class TransactionService extends AbstractService {
 		$query = new EntityQuery();
 		$query->setFilter($this->createEntityFilter('completion.lineItemVersion.transaction.id', $transactionId));
 		$query->setNumberOfEntities(1);
-		$invoices = $this->getInvoiceService()->search($spaceId, $query);
+		$service = $this->getInvoiceService();
+		$invoices = ApiCallTracker::track('transactionInvoice.search', function () use ($service, $spaceId, $query){
+			return $service->search($spaceId, $query);
+		});
 		if (empty($invoices)) {
 			throw new \Exception("No transaction invoice found for transaction $transactionId / $spaceId.");
 		}
@@ -133,7 +143,10 @@ class TransactionService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function getPaymentPageUrl($transactionId, $spaceId){
-		return $this->getPaymentPageService()->paymentPageUrl($spaceId, $transactionId);
+		$service = $this->getPaymentPageService();
+		return ApiCallTracker::track('transaction.paymentPageUrl', function () use ($service, $spaceId, $transactionId){
+			return $service->paymentPageUrl($spaceId, $transactionId);
+		});
 	}
 
 	/**
@@ -144,11 +157,17 @@ class TransactionService extends AbstractService {
 	 * @throws \Wallee\Sdk\ApiException
 	 */
 	public function update(TransactionPending $transaction, $confirm = false){
+		$service = $this->getService();
+		$spaceId = WalleeModule::settings()->getSpaceId();
 		if ($confirm) {
-			return $this->getService()->confirm(WalleeModule::settings()->getSpaceId(), $transaction);
+			return ApiCallTracker::track('transaction.confirm', function () use ($service, $spaceId, $transaction){
+				return $service->confirm($spaceId, $transaction);
+			});
 		}
 		else {
-			return $this->getService()->update(WalleeModule::settings()->getSpaceId(), $transaction);
+			return ApiCallTracker::track('transaction.update', function () use ($service, $spaceId, $transaction){
+				return $service->update($spaceId, $transaction);
+			});
 		}
 	}
 	/**
@@ -162,7 +181,10 @@ class TransactionService extends AbstractService {
 	* @throws \Wallee\Sdk\VersioningException 
 	*/
 	public function updateLineItems($spaceId, TransactionLineItemVersionCreate $lineItemVersion){
-		return $this->getTransactionLineItemVersionService()->create($spaceId, $lineItemVersion);
+		$service = $this->getTransactionLineItemVersionService();
+		return ApiCallTracker::track('transaction.updateLineItems', function () use ($service, $spaceId, $lineItemVersion){
+			return $service->create($spaceId, $lineItemVersion);
+		});
 	}
 
 	/**
@@ -176,7 +198,10 @@ class TransactionService extends AbstractService {
 		$jsUrl = '';
 		switch (WalleeModule::settings()->getIntegrationMode()) {
 			case IntegrationMode::IFRAME:
-				$jsUrl = $this->getIframeService()->javascriptUrl($spaceId, $transactionId);
+				$service = $this->getIframeService();
+				$jsUrl = ApiCallTracker::track('transaction.javascriptUrl', function () use ($service, $spaceId, $transactionId){
+					return $service->javascriptUrl($spaceId, $transactionId);
+				});
 				break;
 		}
 		return $jsUrl;

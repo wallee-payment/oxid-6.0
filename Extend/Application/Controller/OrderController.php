@@ -31,20 +31,21 @@ class OrderController extends OrderController_parent
     public function init()
     {
         $this->_OrderController_init_parent();
-        if ($this->getIsOrderStep()) {
+        // Without a user there is nothing to push, this happens when the customer logs out while
+        // standing on the checkout page.
+        if ($this->getIsOrderStep() && $this->getUser()) {
             try {
-                $transaction = Transaction::loadPendingFromSession($this->getSession());
-                if ($transaction) {
-                    $transaction->updateFromSession();
-                }
-            } catch (\Wle\Wallee\Core\Exception\OptimisticLockingException $e) {
-                if (isset($transaction) && $transaction) {
-                    try {
-                        $transaction->pull();
-                    } catch (\Exception $pullE) {
-                        WalleeModule::log(Logger::DEBUG, "OrderController: Failed to pull transaction.");
-                    }
-                }
+                // The checkout marks the basket for recalculation (currency switch, payment costs) but
+                // only recalculates it while rendering, which happens after init(). Without this the
+                // prices of the previous request would be pushed, so a currency change would reach
+                // Wallee with the old amounts.
+                $this->getSession()->getBasket()->calculateBasket(false);
+                // loadPendingFromSession() already pushes the current session state to Wallee,
+                // calling updateFromSession() again here only doubles the API calls.
+                Transaction::loadPendingFromSession($this->getSession());
+            } catch (OptimisticLockingException $e) {
+                WalleeModule::log(Logger::DEBUG,
+                    "OrderController: Optimistic locking conflict while updating transaction: {$e->getMessage()}.");
             } catch (\Exception $e) {
                 WalleeModule::log(Logger::ERROR, "Could not update transaction: {$e}.");
             }
@@ -77,6 +78,10 @@ class OrderController extends OrderController_parent
 	                if ($state === 'WALLEE_' . TransactionState::PENDING) {
 	                    $transaction->setTempBasket($this->getBasket());
 	                    $transaction->setOrderId($order->getId());
+	                    // Store the link to the order before confirming. A confirm which fails otherwise
+	                    // leaves a transaction which cannot be found by order id, so the failure message
+	                    // has nowhere to go and the order is never cancelled.
+	                    $transaction->save();
 	                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->commitTransaction();
 	                    \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->startTransaction();
 	                    $transaction->updateFromSession(true);
@@ -90,6 +95,9 @@ class OrderController extends OrderController_parent
 	                    throw new \Exception(WalleeModule::instance()->translate("Unable to confirm order in state !state.", true, array('!state' => $state)));
 	                }
 	            } catch (\Exception $e) {
+	                // Whatever is still open has to go, the failure handling below must be committed
+	                // on its own, otherwise the cancelled order is lost when the request ends.
+	                $this->wleRollback();
 	                if (isset($transaction)) {
 	                    $state = $transaction->getState();
 	                } else if (!isset($state)) {
@@ -120,9 +128,20 @@ class OrderController extends OrderController_parent
             	$transaction = oxNew(\Wle\Wallee\Application\Model\Transaction::class);
                 /* @var $transaction Transaction */
                 if ($order->load($orderId) && $transaction->loadByOrder($orderId)) {
-                    $transaction->pull();
-                    $order->WalleeFail($transaction->getSdkTransaction()->getUserFailureMessage(), $transaction->getState());
-                    WalleeModule::getUtilsView()->addErrorToDisplay($transaction->getSdkTransaction()->getUserFailureMessage());
+                    // The pull competes with the webhook of the same state change. Should it lose that
+                    // race, the order still has to be failed, otherwise the reload blocker stays in the
+                    // session and the next attempt lands on the thank you page without a payment.
+                    try {
+                        $transaction->pull();
+                    } catch (\Exception $pullException) {
+                        WalleeModule::log(Logger::ERROR,
+                            "Unable to refresh transaction for order {$orderId}: {$pullException->getMessage()}.");
+                    }
+                    $message = $transaction->getSdkTransaction()
+                        ? $transaction->getSdkTransaction()->getUserFailureMessage()
+                        : WalleeModule::instance()->translate("The payment could not be completed. Please try again or choose another payment method.");
+                    $order->WalleeFail($message, $transaction->getState());
+                    WalleeModule::getUtilsView()->addErrorToDisplay($message);
                 } else {
                 	WalleeModule::getUtilsView()->addErrorToDisplay(WalleeModule::instance()->translate("An unknown error occurred, and the order could not be loaded."));
                 }
@@ -146,6 +165,20 @@ class OrderController extends OrderController_parent
         }
     }
     
+    /**
+     * Rolls back the database transaction which is still open after a failed confirmation, so the
+     * failure handling which follows is written with its own commit.
+     */
+    private function wleRollback()
+    {
+        try {
+            \OxidEsales\Eshop\Core\DatabaseProvider::getDb()->rollbackTransaction();
+        } catch (\Exception $e) {
+            WalleeModule::log(Logger::DEBUG,
+                "No open database transaction to roll back: {$e->getMessage()}.");
+        }
+    }
+
     public function isWalleeTransaction()
     {
         return WalleeModule::isWalleePayment($this->getBasket()->getPaymentId());

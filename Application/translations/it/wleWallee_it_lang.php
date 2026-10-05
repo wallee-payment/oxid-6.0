@@ -50,6 +50,7 @@ $aLang = array(
 	'wle_wallee_Open' => 'Aprire',
 	'wle_wallee_wallee Link' => 'wallee Collegamento',
 	'wle_wallee_You must agree to the terms and conditions.' => 'Devi accettare i termini e le condizioni.',
+	'wle_wallee_The payment could not be completed. Please try again or choose another payment method.' => 'Non è stato possibile completare il pagamento. Riprova o scegli un altro metodo di pagamento.',
 	'wle_wallee_Rounding Adjustment' => 'Regolazione dell\'arrotondamento',
 	'wle_wallee_Totals mismatch, please contact merchant or use another payment method.' => 'Totali non corrispondenti, contatta il commerciante o utilizza un altro metodo di pagamento.',
 	

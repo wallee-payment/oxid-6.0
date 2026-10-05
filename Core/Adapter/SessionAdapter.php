@@ -42,6 +42,10 @@ class SessionAdapter implements ITransactionServiceAdapter {
 		if (!$session->getUser() || !$session->getBasket()) {
 			throw new \Exception("User must be logged in and basket must be present.");
 		}
+		// The basket must never be calculated from here. A calculation asks the delivery set list for
+		// the shipping set, which asks for the payment list, which loads the pending transaction and
+		// lands back in this constructor. The checkout entry points calculate the basket before they
+		// push, see OrderController::init().
 		$this->session = $session;
 		$this->basketAdapter = new BasketAdapter($session->getBasket());
 		$this->addressAdapter = new AddressAdapter($session->getUser()->getSelectedAddress(), $session->getUser());
@@ -90,6 +94,20 @@ class SessionAdapter implements ITransactionServiceAdapter {
 		}
 		
 		return $transactionPending;
+	}
+
+	/**
+	 * Fingerprint of the data which would be pushed to Wallee, so an unchanged basket,
+	 * address or order does not have to be pushed again. The version is left out on purpose, it is
+	 * incremented by every update and would make the fingerprint differ each time.
+	 *
+	 * @param TransactionPending $transactionPending
+	 * @return string
+	 */
+	public function getUpdateFingerprint(TransactionPending $transactionPending){
+		$fingerprint = clone $transactionPending;
+		$fingerprint->setVersion(null);
+		return md5(serialize($fingerprint));
 	}
 
 	private function applyAbstractTransactionData(AbstractTransactionPending $transaction){
